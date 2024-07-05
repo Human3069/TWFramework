@@ -46,6 +46,15 @@ namespace _TW_Framework
             _mouseEventHandler.OnStartHandling -= OnStartHandling;
         }
 
+        protected void Update()
+        {
+            if (Input.GetKeyDown(KeyCode.Space) == true)
+            {
+                isEventOn = !isEventOn;
+                SetSilhouettesActive(isEventOn);
+            }
+        }
+
         protected void OnUnitCountChanged(int unitCount)
         {
             if (silhouetteObjList.Count < unitCount)
@@ -73,10 +82,7 @@ namespace _TW_Framework
 
         protected void OnStartHandling(Vector3 lineStartPos, Vector3 lineEndPos)
         {
-            for (int i = 0; i < silhouetteObjList.Count; i++)
-            {
-                silhouetteObjList[i].SetActive(true);
-            }
+            SetSilhouettesActive(true);
 
             List<Vector3> currentPosList = new List<Vector3>();
             List<Vector3> posList;
@@ -120,9 +126,17 @@ namespace _TW_Framework
 
         protected void OnEndHandling(Vector3 lineStartPos, Vector3 lineEndPos)
         {
+            if (isEventOn == false)
+            {
+                SetSilhouettesActive(false);
+            }
+        }
+
+        protected void SetSilhouettesActive(bool isActive)
+        {
             for (int i = 0; i < silhouetteObjList.Count; i++)
             {
-                silhouetteObjList[i].SetActive(false);
+                silhouetteObjList[i].SetActive(isActive);
             }
         }
     }

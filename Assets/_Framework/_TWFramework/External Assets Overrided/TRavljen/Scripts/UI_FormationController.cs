@@ -23,7 +23,7 @@ namespace _TW_Framework
 
         private void Start()
         {
-            unitCountText.text = "Unit Count: 7";
+            unitCountText.text = "Unit Count: 13";
             unitSpacingText.text = "Unit Spacing : 2.00";
             unitsPerRowText.text = "Units per ROW: 4";
             unitNoiseText.text = "Unit Noise : 0.00";

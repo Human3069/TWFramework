@@ -10,7 +10,9 @@ namespace _TW_Framework
     public class FormationController : MonoBehaviour
     {
         public const float MAX_FORMABLE_THRESHOLD = 0.8f;
-        private const string LOG_FORMAT = "<color=white><b>[FormationController]</b></color> {0}";
+
+        private const float _MAX_FORMABLE_ANGLE = 120;
+        private const string _LOG_FORMAT = "<color=white><b>[FormationController]</b></color> {0}";
 
         [SerializeField]
         protected MouseEventHandler _mouseEventHandler;
@@ -32,8 +34,6 @@ namespace _TW_Framework
                 _unitHandlerList = value;
             }
         }
-
-        public List<Vector3> CurrentPosList;
 
         [Space(10)]
         [ReadOnly]
@@ -73,8 +73,6 @@ namespace _TW_Framework
 
                             Destroy(_obj);
                         }
-
-                        ApplyCurrentUnitFormation();
                     }
 
                     if (OnUnitCountChanged != null)
@@ -109,6 +107,7 @@ namespace _TW_Framework
             }
         }
 
+        [Space(10)]
         [ReadOnly]
         [SerializeField]
         protected int _unitsPerRow;
@@ -122,7 +121,9 @@ namespace _TW_Framework
             {
                 if (_unitsPerRow != value)
                 {
-                    _unitsPerRow = value;
+                    _unitsPerRow = Mathf.Clamp(value, 1, UnitHandlerList.Count);
+                    formedUnitsPerColumn = Mathf.Clamp(UnitHandlerList.Count / value, 1, int.MaxValue);
+                    lastColumnCount = UnitHandlerList.Count % value;
                 }
             }
         }
@@ -136,12 +137,18 @@ namespace _TW_Framework
             {
                 return _unitsPerRowRemained;
             }
-            protected set
-            {
-                _unitsPerRowRemained = value;
-            }
         }
 
+        [Space(10)]
+        [ReadOnly]
+        [SerializeField]
+        protected int formedUnitsPerColumn;
+
+        [ReadOnly]
+        [SerializeField]
+        protected int lastColumnCount;
+
+        [Space(10)]
         [ReadOnly]
         [SerializeField]
         protected float _noiseAmount;
@@ -191,6 +198,12 @@ namespace _TW_Framework
             {
                 return _currentFormation;
             }
+            protected set
+            {
+                _currentFormation = value;
+
+                ApplyCurrentUnitFormation();
+            }
         }
 
         protected Vector3 lineStartPos;
@@ -218,9 +231,11 @@ namespace _TW_Framework
             _unitCount = 7;
             _unitSpacing = 2f;
             _unitsPerRow = 4;
+            formedUnitsPerColumn = 2;
+            lastColumnCount = 3;
             _noiseAmount = 0f;
 
-            _currentFormation = new RectangleFormation((int)UnitsPerRow, UnitSpacing, true, IsPivotInMiddle);
+            CurrentFormation = new RectangleFormation((int)UnitsPerRow, UnitSpacing, true, IsPivotInMiddle);
             ApplyCurrentUnitFormation();
         }
 
@@ -230,7 +245,7 @@ namespace _TW_Framework
             {
                 float _unitsPerRowUnclamped = lineLength / UnitSpacing;
                 int _unitsPerRow = (int)(lineLength / UnitSpacing);
-                UnitsPerRowRemained = _unitsPerRowUnclamped - _unitsPerRow;
+                this._unitsPerRowRemained = _unitsPerRowUnclamped - _unitsPerRow;
 
                 _unitsPerRow = Mathf.Clamp(_unitsPerRow, 1, int.MaxValue);
                 this.UnitsPerRow = _unitsPerRow;
@@ -248,30 +263,28 @@ namespace _TW_Framework
         {
             if (formationType == typeof(RectangleFormation))
             {
-                _currentFormation = new RectangleFormation(UnitsPerRow, UnitSpacing, true, IsPivotInMiddle);
+                CurrentFormation = new RectangleFormation(UnitsPerRow, UnitSpacing, true, IsPivotInMiddle);
             }
             else if (formationType == typeof(CircleFormation))
             {
-                _currentFormation = new CircleFormation(UnitSpacing);
+                CurrentFormation = new CircleFormation(UnitSpacing);
             }
             else if (formationType == typeof(LineFormation))
             {
-                _currentFormation = new LineFormation(UnitSpacing);
+                CurrentFormation = new LineFormation(UnitSpacing);
             }
             else if (formationType == typeof(TriangleFormation))
             {
-                _currentFormation = new TriangleFormation(UnitSpacing);
+                CurrentFormation = new TriangleFormation(UnitSpacing);
             }
             else if (formationType == typeof(ConeFormation))
             {
-                _currentFormation = new ConeFormation(UnitSpacing, IsPivotInMiddle);
+                CurrentFormation = new ConeFormation(UnitSpacing, IsPivotInMiddle);
             }
             else
             {
                 Debug.Assert(false);
             }
-
-            ApplyCurrentUnitFormation();
         }
 
         protected void ApplyMouseFormationing(Vector3 startPos, Vector3 endPos)
@@ -290,7 +303,7 @@ namespace _TW_Framework
             float _length = (lineStartPos - lineEndPos).magnitude;
             _length = Mathf.Clamp(_length, 0.001f, float.MaxValue);
 
-            float normalizedRemained = UnitsPerRowRemained / _length;
+            float normalizedRemained = this._unitsPerRowRemained / _length;
 
             Vector3 middlePos = Vector3.LerpUnclamped(lineStartPos, lineEndPos, 0.5f - normalizedRemained);
  
@@ -300,9 +313,18 @@ namespace _TW_Framework
             if (_length > MAX_FORMABLE_THRESHOLD)
             {
                 facingAngle = Mathf.Atan2(leftDirection.x, leftDirection.z) * Mathf.Rad2Deg;
-                posList = FormationPositionerEx.GetAlignedPositionList(UnitHandlerList.Count, _currentFormation, middlePos, facingAngle);
+                float facingAngleDiff = Mathf.Abs(facingAngle - currentFacingAngle);
 
-                SetUnitPositionByDistance(posList, facingAngle);
+                posList = FormationPositionerEx.GetAlignedPositionList(UnitHandlerList.Count, CurrentFormation, middlePos, facingAngle);
+
+                if (facingAngleDiff < 90 || facingAngleDiff > (360 - 90))
+                {
+                    SetUnitPositionByDistanceDesc(posList, facingAngle);
+                }
+                else
+                {
+                    SetUnitPositionByDistanceAsc(posList, facingAngle);
+                }
             }
             else
             {
@@ -312,11 +334,10 @@ namespace _TW_Framework
                     currentPosList.Add(UnitHandlerList[i].transform.position);
                 }
 
-                (posList, facingAngle) = FormationPositionerEx.GetPositionListAndAngle(currentPosList, _currentFormation, lineStartPos);
-
+                (posList, facingAngle) = FormationPositionerEx.GetPositionListAndAngle(currentPosList, CurrentFormation, lineStartPos);
                 float facingAngleDiff = Mathf.Abs(facingAngle - currentFacingAngle);
-                Debug.Log(facingAngleDiff);
-                if (facingAngleDiff < 120 || facingAngleDiff > 240)
+
+                if (facingAngleDiff < _MAX_FORMABLE_ANGLE || facingAngleDiff > (360 - _MAX_FORMABLE_ANGLE))
                 {
                     for (int i = 0; i < UnitHandlerList.Count; i++)
                     {
@@ -326,18 +347,106 @@ namespace _TW_Framework
                 }
                 else
                 {
-                    SetUnitPositionByDistance(posList, facingAngle);
+                    SetUnitPositionByDistanceAsc(posList, facingAngle);
                 }
             }
 
             currentFacingAngle = facingAngle;
         }
 
-        protected void SetUnitPositionByDistance(List<Vector3> posList, float facingAngle)
+        protected void SetUnitPositionByDistanceAsc(List<Vector3> posList, float facingAngle)
         {
             Dictionary<Vector3, UnitHandler> selectedNearestDic = new Dictionary<Vector3, UnitHandler>();
 
-            for (int i = 0; i < UnitHandlerList.Count; i++)
+            for (int i = 0; i < formedUnitsPerColumn; i++)
+            {
+                for (int j = 0; j < UnitsPerRow; j++)
+                {
+                    int index = (i * UnitsPerRow) + j;
+
+                    float nearestSqrDistance = float.MaxValue;
+                    Vector3 nearestPos = Vector3.zero;
+
+                    for (int k = 0; k < posList.Count; k++)
+                    {
+                        if (selectedNearestDic.ContainsKey(posList[k]) == false)
+                        {
+                            float sqrDistance = (posList[k] - UnitHandlerList[index].transform.position).sqrMagnitude;
+                            if (sqrDistance < nearestSqrDistance)
+                            {
+                                nearestSqrDistance = sqrDistance;
+                                nearestPos = posList[k];
+                            }
+                        }
+                    }
+
+                    selectedNearestDic.Add(nearestPos, UnitHandlerList[index]);
+                    UnitHandlerList[index].SetTargetDestination(nearestPos + UnitFormationHelper.GetNoise(NoiseAmount), facingAngle);
+                }
+            }
+
+            for (int i = UnitsPerRow * formedUnitsPerColumn; i < UnitHandlerList.Count; i++)
+            {
+                float nearestSqrDistance = float.MaxValue;
+                Vector3 nearestPos = Vector3.zero;
+                
+                for (int j = 0; j < posList.Count; j++)
+                {
+                    if (selectedNearestDic.ContainsKey(posList[j]) == false)
+                    {
+                        float sqrDistance = (posList[j] - UnitHandlerList[i].transform.position).sqrMagnitude;
+                        if (sqrDistance < nearestSqrDistance)
+                        {
+                            nearestSqrDistance = sqrDistance;
+                            nearestPos = posList[j];
+                        }
+                    }
+                }
+                
+                selectedNearestDic.Add(nearestPos, UnitHandlerList[i]);
+                UnitHandlerList[i].SetTargetDestination(nearestPos + UnitFormationHelper.GetNoise(NoiseAmount), facingAngle);
+            }
+
+            for (int i = 0; i < posList.Count; i++)
+            {
+                selectedNearestDic[posList[i]].transform.SetAsLastSibling();
+            }
+            UnitHandlerList.SortBySiblingIndex();
+
+            // for (int i = 0; i < UnitHandlerList.Count; i++)
+            // {
+            //     float nearestSqrDistance = float.MaxValue;
+            //     Vector3 nearestPos = Vector3.zero;
+            // 
+            //     for (int k = 0; k < posList.Count; k++)
+            //     {
+            //         if (selectedNearestDic.ContainsKey(posList[k]) == false)
+            //         {
+            //             float sqrDistance = (posList[k] - UnitHandlerList[i].transform.position).sqrMagnitude;
+            //             if (sqrDistance < nearestSqrDistance)
+            //             {
+            //                 nearestSqrDistance = sqrDistance;
+            //                 nearestPos = posList[k];
+            //             }
+            //         }
+            //     }
+            // 
+            //     selectedNearestDic.Add(nearestPos, UnitHandlerList[i]);
+            //     UnitHandlerList[i].SetTargetDestination(nearestPos + UnitFormationHelper.GetNoise(NoiseAmount), facingAngle);
+            // }
+            // 
+            // for (int i = 0; i < posList.Count; i++)
+            // {
+            //     selectedNearestDic[posList[i]].transform.SetAsLastSibling();
+            // }
+            // UnitHandlerList.SortBySiblingIndex();
+        }
+
+        protected void SetUnitPositionByDistanceDesc(List<Vector3> posList, float facingAngle)
+        {
+            Dictionary<Vector3, UnitHandler> selectedNearestDic = new Dictionary<Vector3, UnitHandler>();
+
+            for (int i = UnitsPerRow * formedUnitsPerColumn; i < UnitHandlerList.Count; i++)
             {
                 float nearestSqrDistance = float.MaxValue;
                 Vector3 nearestPos = Vector3.zero;
@@ -359,14 +468,39 @@ namespace _TW_Framework
                 UnitHandlerList[i].SetTargetDestination(nearestPos + UnitFormationHelper.GetNoise(NoiseAmount), facingAngle);
             }
 
+            for (int i = formedUnitsPerColumn - 1; i >= 0; i--)
+            {
+                for (int j = UnitsPerRow - 1; j >= 0; j--)
+                {
+                    int index = (i * UnitsPerRow) + j;
+
+                    float nearestSqrDistance = float.MaxValue;
+                    Vector3 nearestPos = Vector3.zero;
+
+                    for (int k = 0; k < posList.Count; k++)
+                    {
+                        if (selectedNearestDic.ContainsKey(posList[k]) == false)
+                        {
+                            float sqrDistance = (posList[k] - UnitHandlerList[index].transform.position).sqrMagnitude;
+                            if (sqrDistance < nearestSqrDistance)
+                            {
+                                nearestSqrDistance = sqrDistance;
+                                nearestPos = posList[k];
+                            }
+                        }
+                    }
+
+                    selectedNearestDic.Add(nearestPos, UnitHandlerList[index]);
+                    UnitHandlerList[index].SetTargetDestination(nearestPos + UnitFormationHelper.GetNoise(NoiseAmount), facingAngle);
+                }
+            }
+
             for (int i = 0; i < posList.Count; i++)
             {
                 selectedNearestDic[posList[i]].transform.SetAsLastSibling();
             }
-
             UnitHandlerList.SortBySiblingIndex();
         }
-
 
         protected void ReinstantiateFormation()
         {
