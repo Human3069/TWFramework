@@ -1,6 +1,10 @@
-using System.Collections;
+using System;
 using System.Collections.Generic;
+using System.Security.Cryptography;
+using System.Text;
 using UnityEngine;
+using UnityEngine.EventSystems;
+using UnityEngine.UI;
 
 namespace _KMH_Framework
 {
@@ -110,5 +114,204 @@ namespace _KMH_Framework
             return GetShortestTwoPoint(aStartPoint, aEndPoint, bStartPoint, bEndPoint, true);
         }
         #endregion
+
+        #region Camera Viewports...
+        public static bool IsInViewport(Vector3 worldPos, Camera camera, float margin = 0f)
+        {
+            Vector3 viewportPosition = camera.WorldToViewportPoint(worldPos);
+            bool isInView = viewportPosition.x >= margin && viewportPosition.x <= (1f - margin) &&
+                            viewportPosition.y >= margin && viewportPosition.y <= (1f - margin);
+
+            return isInView;
+        }
+
+        public static Vector2 ViewportOuterDelta(Vector3 worldPos, Camera camera, float margin = 0f)
+        {
+            Vector3 viewportPosition = camera.WorldToViewportPoint(worldPos);
+            float xDelta = 0f;
+            if (viewportPosition.x < margin)
+            {
+                xDelta = Mathf.Abs(viewportPosition.x - margin);
+            }
+            else if (viewportPosition.x > (1f - margin))
+            {
+                xDelta = viewportPosition.x - 1f + margin;
+            }
+
+            float yDelta = 0f;
+            if (viewportPosition.y < margin)
+            {
+                yDelta = Mathf.Abs(viewportPosition.y - margin);
+            }
+            else if (viewportPosition.y > (1f - margin))
+            {
+                yDelta = viewportPosition.y - 1f + margin;
+            }
+
+            Vector2 result = new Vector2(xDelta, yDelta);
+            return result;
+        }
+        #endregion
+    }
+
+    public static class ExtentionMethods
+    {
+        public static void Swap<T>(this List<T> list, int from, int to)
+        {
+            T tmp = list[from];
+            list[from] = list[to];
+            list[to] = tmp;
+        }
+
+        public static bool TryFind(this Transform _t, string name, out Transform _foundT)
+        {
+            _foundT = _t.Find(name);
+            return _foundT != null;
+        }
+
+        public static bool Similiar(this float origin, float comparer, float limit)
+        {
+            float difference = Mathf.Abs(origin - comparer);
+            float absLimit = Mathf.Abs(limit);
+
+            return absLimit > difference;
+        }
+
+        public static string ToEncryptAES(this string originalText, string key)
+        {
+            RijndaelManaged rijndaelCipher = GetRijndaelCipher(key);
+            byte[] textBytes = Encoding.UTF8.GetBytes(originalText);
+
+            string encrypted = Convert.ToBase64String(rijndaelCipher.CreateEncryptor().TransformFinalBlock(textBytes, 0, textBytes.Length));
+            return encrypted;
+        }
+
+        public static string ToDecryptAES(this string targetText, string key)
+        {
+            RijndaelManaged rijndaelCipher = GetRijndaelCipher(key);
+            byte[] encryptedData = Convert.FromBase64String(targetText);
+            byte[] decryptedAsBytes = rijndaelCipher.CreateDecryptor().TransformFinalBlock(encryptedData, 0, encryptedData.Length);
+
+            return Encoding.UTF8.GetString(decryptedAsBytes);
+        }
+
+        private static RijndaelManaged GetRijndaelCipher(string key)
+        {
+            byte[] passwordBytes = Encoding.UTF8.GetBytes(key);
+            byte[] keyBytes = new byte[16];
+
+            int _length = passwordBytes.Length;
+            if (_length > keyBytes.Length)
+            {
+                _length = keyBytes.Length;
+            }
+            Array.Copy(passwordBytes, keyBytes, _length);
+
+            return new RijndaelManaged
+            {
+                Mode = CipherMode.CBC,
+                Padding = PaddingMode.PKCS7,
+                KeySize = 128,
+                BlockSize = 128,
+                Key = keyBytes,
+                IV = keyBytes
+            };
+        }
+    }
+
+    // UI 기본적인 요구사항 중 Tab 누르면 다음 Selectable로 전환되는 요구가 많습니다.
+    // 그걸 구현하려고 만든것입니다.
+    public class SelectionCircularList : IDisposable
+    {
+        // 기본적으로 Unity C# 에서는 순환 LinkedList를 지원하지 않음. 따라서 별도로 지정해야 합니다.
+        private LinkedList<Selectable> selectableLinkedList = new LinkedList<Selectable>();
+
+        public SelectionCircularList(params Selectable[] selectables)
+        {
+            Debug.Assert(selectables.Length > 1);
+
+            for (int i = 0; i < selectables.Length; i++)
+            {
+                selectableLinkedList.AddLast(selectables[i]);
+            }
+
+            SelectFirst();
+        }
+
+        public void SelectFirst()
+        {
+            if (selectableLinkedList.Count > 0)
+            {
+                selectableLinkedList.First.Value.Select();
+            }
+        }
+
+        public Selectable GetCurrent()
+        {
+            if (selectableLinkedList.Count > 0)
+            {
+                EventSystem currentEventSystem = EventSystem.current;
+                if (currentEventSystem == null)
+                {
+                    return null;
+                }
+                else
+                {
+                    GameObject selectedObj = currentEventSystem.currentSelectedGameObject;
+                    if (selectedObj != null)
+                    {
+                        if (selectedObj.TryGetComponent<Selectable>(out Selectable foundSelectable) == true)
+                        {
+                            LinkedListNode<Selectable> node = selectableLinkedList.Find(foundSelectable);
+                            return node.Value;
+                        }
+                        else
+                        {
+                            return null;
+                        }
+                    }
+                    else
+                    {
+                        return null;
+                    }
+                }
+            }
+            else
+            {
+                return null;
+            }
+        }
+
+        public bool TryMoveNext()
+        {
+            Selectable currentSelectable = GetCurrent();
+            if (currentSelectable != null)
+            {
+                LinkedListNode<Selectable> node = selectableLinkedList.Find(currentSelectable);
+                bool isMovable = (node != null);
+                if (isMovable == true)
+                {
+                    if (node.Next == null)
+                    {
+                        selectableLinkedList.First.Value.Select();
+                    }
+                    else
+                    {
+                        node.Next.Value.Select();
+                    }
+                }
+
+                return isMovable;
+            }
+            else
+            {
+                return false;
+            }
+        }
+
+        public void Dispose()
+        {
+            selectableLinkedList.Clear();
+        }
     }
 }

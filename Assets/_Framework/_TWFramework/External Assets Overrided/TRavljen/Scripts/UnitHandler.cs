@@ -7,11 +7,11 @@ namespace _TW_Framework
     public class UnitHandler : MonoBehaviour
     {
         protected NavMeshAgent _navMeshAgent;
+        protected FormationController _controller;
 
         protected float facingAngle = 0f;
         protected bool faceOnDestination = false;
 
-        [SerializeField, Tooltip("Speed with which the unit will rotate towards the formation facing angle.")]
         protected float rotationSpeed = 100;
 
         [HideInInspector]
@@ -28,6 +28,43 @@ namespace _TW_Framework
             }
         }
 
+        protected bool _isStopped = false;
+        public bool IsStopped
+        {
+            get
+            {
+                return _isStopped;
+            }
+            protected set
+            {
+                if (_isStopped != value)
+                {
+                    _isStopped = value;
+
+                    if (value == true)
+                    {
+                        IsYielding = false;
+                    }
+                }
+            }
+        }
+
+        public Vector3 TargetPos
+        {
+            get
+            {
+                return _navMeshAgent.destination;
+            }
+        }
+
+        [HideInInspector]
+        public bool IsYielding = false;
+
+        public void Initialize(FormationController controller)
+        {
+            this._controller = controller;
+        }
+
         protected void Start()
         {
             _navMeshAgent = this.GetComponent<NavMeshAgent>();
@@ -42,6 +79,8 @@ namespace _TW_Framework
 
                 this.transform.rotation = Quaternion.AngleAxis(newAngle, Vector3.up);
             }
+
+            IsStopped = Vector3.Distance(_navMeshAgent.destination, this.transform.position) < _navMeshAgent.stoppingDistance;
         }
 
         public void SetTargetDestination(Vector3 newTargetDestination, float newFacingAngle)
@@ -57,7 +96,7 @@ namespace _TW_Framework
             facingAngle = newFacingAngle;
         }
 
-#if true
+#if UNITY_EDITOR
         private void OnDrawGizmos()
         {
             GUIStyle labelStyle = new GUIStyle();

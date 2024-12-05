@@ -1,3 +1,4 @@
+using Cysharp.Threading.Tasks;
 using System.Collections;
 using TMPro;
 using UnityEngine;
@@ -25,17 +26,12 @@ namespace _KMH_Framework
             id = enteredKeyCount;
             enteredKeyCount++;
 
-            StartCoroutine(PostAwake());
+            PostAwake().Forget();
         }
 
-        protected virtual IEnumerator PostAwake()
+        protected virtual async UniTaskVoid PostAwake()
         {
-            while (KeyInputManager.Instance == null)
-            {
-                Debug.LogFormat(LOG_FORMAT, "yield return null");
-
-                yield return null;
-            }
+            await UniTask.WaitWhile(() => KeyInputManager.Instance == null);
             _manager = KeyInputManager.Instance;
 
             contentText.text = _manager.KeySettings[id].name;

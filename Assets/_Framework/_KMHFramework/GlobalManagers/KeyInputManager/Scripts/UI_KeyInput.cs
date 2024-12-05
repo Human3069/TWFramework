@@ -1,3 +1,4 @@
+using Cysharp.Threading.Tasks;
 using System.Collections;
 using System.Collections.Generic;
 using UnityEngine;
@@ -44,19 +45,14 @@ namespace _KMH_Framework
                 return;
             }
 
-            StartCoroutine(PostAwake());
+            PostAwake().Forget();
 
             Debug.Assert(settingPanel.activeSelf == false);
         }
 
-        protected virtual IEnumerator PostAwake()
+        protected virtual async UniTaskVoid PostAwake()
         {
-            while (KeyInputManager.Instance == null)
-            {
-                Debug.LogFormat(LOG_FORMAT, "yield return null");
-
-                yield return null;
-            }
+            await UniTask.WaitWhile(() => KeyInputManager.Instance == null);
 
             for (int i = 0; i < KeyInputManager.Instance.KeySettings.Length; i++)
             {

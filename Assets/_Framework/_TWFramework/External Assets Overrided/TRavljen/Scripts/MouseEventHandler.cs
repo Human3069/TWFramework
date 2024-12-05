@@ -1,3 +1,4 @@
+using Cysharp.Threading.Tasks;
 using System.Collections;
 using System.Collections.Generic;
 using UnityEngine;
@@ -58,11 +59,11 @@ namespace _TW_Framework
                 IsHandling = true;
                 _lineRenderer.enabled = true;
 
-                StartCoroutine(PostOnClicked());
+                PostOnClicked().Forget();
             }
         }
 
-        protected IEnumerator PostOnClicked()
+        protected async UniTaskVoid PostOnClicked()
         {
             Ray ray = Camera.main.ScreenPointToRay(Input.mousePosition);
             if (Physics.Raycast(ray, out RaycastHit _hit, 100, groundLayerMask))
@@ -92,7 +93,7 @@ namespace _TW_Framework
                     OnDuringHandling(lineStartPos, lineEndPos, lineLength);
                 }
 
-                yield return null;
+                await UniTask.NextFrame();
             }
 
             IsHandling = false;
