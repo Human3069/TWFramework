@@ -4,6 +4,7 @@ using TRavljen.UnitFormation;
 using UnityEngine;
 using System;
 using System.Collections;
+using Cysharp.Threading.Tasks;
 
 namespace _TW_Framework
 {
@@ -193,6 +194,12 @@ namespace _TW_Framework
             }
         }
 
+        [Header("=== Yieldable ===")]
+        [SerializeField]
+        protected float yieldIterationInterval = 0.5f;
+        [SerializeField]
+        protected float yieldRadiusPerUnit = 2.5f;
+
         protected IFormation _currentFormation;
         public IFormation CurrentFormation
         {
@@ -244,65 +251,198 @@ namespace _TW_Framework
             ApplyCurrentUnitFormation();
         }
 
-        protected void Update()
+#if true
+        protected async UniTask YieldPositionRoutine()
         {
-            if (Input.GetKeyDown(KeyCode.Alpha1))
+            await UniTaskEx.WaitForSeconds(this, 0, 0.1f);
+
+            List<UnitHandler> movingUnitList = UnitHandlerList.FindAll(x => x.IsStopped == false);
+            Debug.Log(movingUnitList.Count);
+
+            while (movingUnitList.Count > 0)
             {
-                YieldPosition();
+                movingUnitList = UnitHandlerList.FindAll(x => x.IsStopped == false);
+
+                for (int i = 0; i < movingUnitList.Count; i++)
+                {
+                    Vector3 middlePos = (movingUnitList[i].TargetPos + movingUnitList[i].transform.position) / 2f;
+                    DrawStartAndDestGizmoRoutine(new KeyValuePair<Vector3, Vector3>(movingUnitList[i].TargetPos, movingUnitList[i].transform.position)).Forget();
+
+                    float nearestDistance = float.MaxValue;
+                    UnitHandler nearestUnit = null;
+
+                    Collider[] foundColliders = Physics.OverlapSphere(middlePos, yieldRadiusPerUnit * UnitSpacing);
+                    DrawSphereGizmoRoutine(new KeyValuePair<Vector3, float>(middlePos, yieldRadiusPerUnit * UnitSpacing)).Forget();
+
+                    for (int j = 0; j < foundColliders.Length; j++)
+                    {
+                        if (foundColliders[j].TryGetComponent<UnitHandler>(out UnitHandler overlappedHandler) == true)
+                        {
+                            if (overlappedHandler.IsStopped == false ||
+                                overlappedHandler.IsYielding == true ||
+                                overlappedHandler == movingUnitList[i])
+                            {
+                                continue;
+                            }
+
+                            float distance = (overlappedHandler.TargetPos - middlePos).sqrMagnitude;
+                            if (distance < nearestDistance)
+                            {
+                                nearestDistance = distance;
+                                nearestUnit = overlappedHandler;
+                            }
+                        }
+                    }
+
+                    if (nearestUnit != null)
+                    {
+                        Vector3 yieldedPos = nearestUnit.TargetPos;
+
+                        float movingUnitDistance = (movingUnitList[i].TargetPos - movingUnitList[i].transform.position).magnitude;
+                        float yieldedToStartDistance = (yieldedPos - movingUnitList[i].transform.position).magnitude;
+                        float yieldedToEndDistance = (yieldedPos - movingUnitList[i].TargetPos).magnitude;
+
+                        if (movingUnitDistance > yieldedToStartDistance &&
+                            movingUnitDistance > yieldedToEndDistance)
+                        {
+                            nearestUnit.SetTargetDestination(movingUnitList[i].TargetPos, currentFacingAngle);
+                            nearestUnit.IsYielding = true;
+                            DrawYieldedStartAndDestGizmoRoutine(new KeyValuePair<Vector3, Vector3>(movingUnitList[i].TargetPos, nearestUnit.transform.position)).Forget();
+
+                            movingUnitList[i].SetTargetDestination(yieldedPos, currentFacingAngle);
+                            movingUnitList[i].IsYielding = true;
+                            DrawYieldedStartAndDestGizmoRoutine(new KeyValuePair<Vector3, Vector3>(yieldedPos, movingUnitList[i].transform.position)).Forget();
+                        }
+                    }
+
+                    await UniTask.Yield();
+                }
+
+                await UniTaskEx.WaitForSeconds(this, 0, yieldIterationInterval);
             }
         }
-
-        private const float MAX_YIELDABLE_DISTANCE = 2.5f;
-
-        protected void YieldPosition()
+#else
+        protected async UniTask YieldPositionRoutine()
         {
+            await UniTaskEx.WaitForSeconds(this, 0, 0.1f);
+
             List<UnitHandler> movingUnitList = UnitHandlerList.FindAll(x => x.IsStopped == false);
+            Debug.Log(movingUnitList.Count);
 
-            for (int i = 0; i < movingUnitList.Count; i++)
+            while (movingUnitList.Count > 0)
             {
-                Vector3 middlePos = (movingUnitList[i].TargetPos + movingUnitList[i].transform.position) / 2f;
+                movingUnitList = UnitHandlerList.FindAll(x => x.IsStopped == false);
 
-                float nearestDistance = float.MaxValue;
-                UnitHandler nearestUnit = null;
-
-                Collider[] foundColliders = Physics.OverlapSphere(middlePos, MAX_YIELDABLE_DISTANCE * UnitSpacing);
-                for (int j = 0; j < foundColliders.Length; j++)
+                for (int i = 0; i < movingUnitList.Count; i++)
                 {
-                    if (foundColliders[j].TryGetComponent<UnitHandler>(out UnitHandler overlappedHandler) == true)
-                    {
-                        if (overlappedHandler.IsStopped == false ||
-                            overlappedHandler == movingUnitList[i])
-                        {
-                            continue;
-                        }
+                    Vector3 middlePos = (movingUnitList[i].TargetPos + movingUnitList[i].transform.position) / 2f;
+                    DrawStartAndDestGizmoRoutine(new KeyValuePair<Vector3, Vector3>(movingUnitList[i].TargetPos, movingUnitList[i].transform.position)).Forget();
 
-                        float distance = (overlappedHandler.TargetPos - middlePos).sqrMagnitude;
-                        if (distance < nearestDistance)
+                    float nearestDistance = float.MaxValue;
+                    UnitHandler nearestUnit = null;
+
+                    // Collider[] foundColliders = Physics.OverlapSphere(middlePos, yieldRadiusPerUnit * UnitSpacing);
+
+                    float length = (movingUnitList[i].TargetPos - movingUnitList[i].transform.position).magnitude;
+                    Vector3 direction = (movingUnitList[i].TargetPos - movingUnitList[i].transform.position).normalized;
+                    Ray ray = new Ray(movingUnitList[i].transform.position + new Vector3(0f, 0.5f, 0f), direction);
+                    RaycastHit[] hits = Physics.RaycastAll(ray, length);
+
+                    // DrawSphereGizmoRoutine(new KeyValuePair<Vector3, float>(middlePos, yieldRadiusPerUnit * UnitSpacing)).Forget();
+
+                    for (int j = 0; j < hits.Length; j++)
+                    {
+                        if (hits[j].collider.TryGetComponent<UnitHandler>(out UnitHandler overlappedHandler) == true)
                         {
-                            nearestDistance = distance;
-                            nearestUnit = overlappedHandler;
+                            if (overlappedHandler.IsStopped == false ||
+                                overlappedHandler.IsYielding == true ||
+                                overlappedHandler == movingUnitList[i])
+                            {
+                                continue;
+                            }
+
+                            float distance = (overlappedHandler.TargetPos - middlePos).sqrMagnitude;
+                            if (distance < nearestDistance)
+                            {
+                                nearestDistance = distance;
+                                nearestUnit = overlappedHandler;
+                            }
                         }
                     }
-                }
 
-                if (nearestUnit != null)
-                {
-                    Vector3 yieldedPos = nearestUnit.TargetPos;
-
-                    float movingUnitDistance = (movingUnitList[i].TargetPos - movingUnitList[i].transform.position).magnitude;
-                    float yieldedToStartDistance = (yieldedPos - movingUnitList[i].transform.position).magnitude;
-                    float yieldedToEndDistance = (yieldedPos - movingUnitList[i].TargetPos).magnitude;
-
-                    if (movingUnitDistance > yieldedToStartDistance &&
-                        movingUnitDistance > yieldedToEndDistance)
+                    if (nearestUnit != null)
                     {
-                        nearestUnit.SetTargetDestination(movingUnitList[i].TargetPos, currentFacingAngle);
-                        movingUnitList[i].SetTargetDestination(yieldedPos, currentFacingAngle);
+                        Vector3 yieldedPos = nearestUnit.TargetPos;
+
+                        float movingUnitDistance = (movingUnitList[i].TargetPos - movingUnitList[i].transform.position).magnitude;
+                        float yieldedToStartDistance = (yieldedPos - movingUnitList[i].transform.position).magnitude;
+                        float yieldedToEndDistance = (yieldedPos - movingUnitList[i].TargetPos).magnitude;
+
+                        if (movingUnitDistance > yieldedToStartDistance &&
+                            movingUnitDistance > yieldedToEndDistance)
+                        {
+                            nearestUnit.SetTargetDestination(movingUnitList[i].TargetPos, currentFacingAngle);
+                            nearestUnit.IsYielding = true;
+                            DrawYieldedStartAndDestGizmoRoutine(new KeyValuePair<Vector3, Vector3>(movingUnitList[i].TargetPos, nearestUnit.transform.position)).Forget();
+
+                            movingUnitList[i].SetTargetDestination(yieldedPos, currentFacingAngle);
+                            movingUnitList[i].IsYielding = true;
+                            DrawYieldedStartAndDestGizmoRoutine(new KeyValuePair<Vector3, Vector3>(yieldedPos, movingUnitList[i].transform.position)).Forget();
+                        }
                     }
+
+                    await UniTask.Yield();
                 }
+
+                await UniTaskEx.WaitForSeconds(this, 0, yieldIterationInterval);
+            }
+        }
+#endif
+
+        protected List<KeyValuePair<Vector3, float>> gizmoSphereList = new List<KeyValuePair<Vector3, float>>();
+        protected List<KeyValuePair<Vector3, Vector3>> startAndDestList = new List<KeyValuePair<Vector3, Vector3>>();
+        protected List<KeyValuePair<Vector3, Vector3>> yieldedStartAndDestList = new List<KeyValuePair<Vector3, Vector3>>();
+
+        protected async UniTaskVoid DrawSphereGizmoRoutine(KeyValuePair<Vector3, float> pair)
+        {
+            gizmoSphereList.Add(pair);
+            await UniTask.WaitForSeconds(0.1f);
+            gizmoSphereList.Remove(pair);
+        }
+
+        protected async UniTaskVoid DrawStartAndDestGizmoRoutine(KeyValuePair<Vector3, Vector3> pair)
+        {
+            startAndDestList.Add(pair);
+            await UniTask.WaitForSeconds(0.1f);
+            startAndDestList.Remove(pair);
+        }
+
+        protected async UniTaskVoid DrawYieldedStartAndDestGizmoRoutine(KeyValuePair<Vector3, Vector3> pair)
+        {
+            yieldedStartAndDestList.Add(pair);
+            await UniTask.WaitForSeconds(0.1f);
+            yieldedStartAndDestList.Remove(pair);
+        }
+
+        protected void OnDrawGizmos()
+        {
+            foreach (KeyValuePair<Vector3, float> pair in gizmoSphereList)
+            {
+                Gizmos.color = new Color(0f, 1f, 0f, 0.1f);
+                Gizmos.DrawSphere(pair.Key, pair.Value);
             }
 
-            Debug.Log("yielded");
+            foreach (KeyValuePair<Vector3, Vector3> pair in startAndDestList)
+            {
+                Gizmos.color = Color.red;
+                Gizmos.DrawLine(pair.Key, pair.Value);
+            }
+
+            foreach (KeyValuePair<Vector3, Vector3> pair in yieldedStartAndDestList)
+            {
+                Gizmos.color = Color.blue;
+                Gizmos.DrawLine(pair.Key, pair.Value);
+            }
         }
 
         protected void OnDuringHandling(Vector3 lineStartPos, Vector3 lineEndPos, float lineLength)
@@ -418,6 +558,9 @@ namespace _TW_Framework
             }
 
             currentFacingAngle = facingAngle;
+
+            UniTaskEx.Cancel(this, 0);
+            YieldPositionRoutine().Forget();
         }
 
         protected void ReinstantiateFormation()

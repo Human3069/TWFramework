@@ -95,19 +95,5 @@ namespace _TW_Framework
             _navMeshAgent.destination = newTargetDestination;
             facingAngle = newFacingAngle;
         }
-
-#if UNITY_EDITOR
-        private void OnDrawGizmos()
-        {
-            GUIStyle labelStyle = new GUIStyle();
-            labelStyle.fontStyle = FontStyle.Bold;
-            labelStyle.normal.textColor = Color.red;
-
-            Vector3 labelPos = this.transform.position;
-
-            string title = TargetColumn.ToString();
-            Handles.Label(labelPos, title, labelStyle);
-        }
-#endif
     }
 }
