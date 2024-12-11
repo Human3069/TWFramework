@@ -3,20 +3,68 @@ using TRavljen.UnitFormation.Formations;
 using TRavljen.UnitFormation;
 using UnityEngine;
 using System;
-using System.Collections;
 using Cysharp.Threading.Tasks;
 
 namespace _TW_Framework
 {
+    public enum TeamType
+    {
+        Player,
+        Enemy,
+        Neutral
+    }
+
     public class FormationController : MonoBehaviour
     {
         public const float MAX_FORMABLE_THRESHOLD = 0.8f;
-
         private const float _MAX_FORMABLE_ANGLE = 120;
+
         private const string _LOG_FORMAT = "<color=white><b>[FormationController]</b></color> {0}";
 
+        [Header("=== FormationController ===")]
         [SerializeField]
-        protected MouseEventHandler _mouseEventHandler;
+        protected TeamType teamType;
+        [ReadOnly]
+        [SerializeField]
+        protected FormationController _targetController;
+        protected FormationController TargetController
+        {
+            get
+            {
+                return _targetController;
+            }
+            set
+            {
+                _targetController = value;
+                if (value != null)
+                {
+                    OnAssignedTargetController().Forget();
+                }
+            }
+        }
+
+        protected virtual async UniTask OnAssignedTargetController()
+        {
+            while (TargetController != null && TargetController.UnitHandlerList.Count != 0)
+            {
+                Vector3 currentLeftDirection = (lineEndPos - lineStartPos).normalized;
+                float length = (lineEndPos - lineStartPos).magnitude;
+
+                Vector3 targetMiddlePos = TargetController.GetMiddlePos();
+                Vector3 targetLeftPos = targetMiddlePos + (currentLeftDirection * length * 0.5f);
+                Vector3 targetRightPos = targetMiddlePos - (currentLeftDirection * length * 0.5f);
+
+                ApplyMouseFormationing(targetLeftPos, targetRightPos);
+
+                await UniTask.WaitForSeconds(0.5f);
+            }
+        }
+
+        [Space(10)]
+        [SerializeField]
+        protected Transform initialLineStartT;
+        [SerializeField]
+        protected Transform initialLineEndT;
 
         [Space(10)]
         [SerializeField]
@@ -58,7 +106,7 @@ namespace _TW_Framework
                         {
                             GameObject _obj = Instantiate(unitPrefab, transform.position, Quaternion.identity);
                             UnitHandler _unit = _obj.GetComponent<UnitHandler>();
-                            _unit.Initialize(this);
+                            _unit.Initialize(this, teamType);
 
                             _obj.transform.parent = this.transform;
 
@@ -84,6 +132,15 @@ namespace _TW_Framework
                     }
                 }
             }
+        }
+
+        public void RemoveUnit(UnitHandler unitHandler)
+        {
+            UnitHandlerList.Remove(unitHandler);
+            Destroy(unitHandler.gameObject);
+
+            UnitCount = UnitHandlerList.Count;
+            ApplyCurrentUnitFormation();
         }
 
         public delegate void UnitCountChanged(int unitCount);
@@ -218,47 +275,53 @@ namespace _TW_Framework
         protected Vector3 lineStartPos;
         protected Vector3 lineEndPos;
 
-        protected void Awake()
+        protected float currentFacingAngle;
+
+        public delegate void Initialized(Vector3 startPos, Vector3 endPos);
+        public event Initialized OnControllerInitialized;
+
+        protected virtual void Start()
         {
-            _mouseEventHandler.OnDuringHandling += OnDuringHandling;
-            _mouseEventHandler.OnEndHandling += OnEndHandling;
-        }
-
-        protected void OnDestroy()
-        {
-            _mouseEventHandler.OnEndHandling -= OnEndHandling;
-            _mouseEventHandler.OnDuringHandling -= OnDuringHandling;
-        }
-
-        protected void Start()
-        {
-            lineStartPos = new Vector3(-3f, 0f, 0f);
-            lineEndPos = new Vector3(3f, 0f, 0f);
-
-            _unitCount = 7;
-            _unitSpacing = 2f;
-            _unitsPerRow = 4;
-            formedUnitsPerColumn = 2;
-            lastColumnCount = 3;
-            _noiseAmount = 0f;
-
-            CurrentFormation = new RectangleFormation((int)UnitsPerRow, UnitSpacing, true, IsPivotInMiddle);
             foreach (UnitHandler unit in UnitHandlerList)
             {
-                unit.Initialize(this);
+                unit.Initialize(this, teamType);
             }
 
-            ApplyCurrentUnitFormation();
+            lineStartPos = initialLineStartT.position;
+            lineEndPos = initialLineEndT.position;
+            float lineLength = (lineStartPos - lineEndPos).magnitude;
+
+            _unitCount = UnitHandlerList.Count;
+            _unitSpacing = 2f;
+            _noiseAmount = 0f;
+
+            float _unitsPerRowUnclamped = lineLength / UnitSpacing;
+            int _unitsPerRow = (int)(lineLength / UnitSpacing);
+            this._unitsPerRowRemained = _unitsPerRowUnclamped - _unitsPerRow;
+
+            _unitsPerRow = Mathf.Clamp(_unitsPerRow, 1, int.MaxValue);
+            this.UnitsPerRow = _unitsPerRow;
+
+            CurrentFormation = new RectangleFormation((int)UnitsPerRow, UnitSpacing, true, IsPivotInMiddle);
+
+            PostStart().Forget();
         }
 
-#if true
+        protected async UniTaskVoid PostStart()
+        {
+            await UniTask.Yield();
+
+            if (OnControllerInitialized != null)
+            {
+                OnControllerInitialized(lineStartPos, lineEndPos);
+            }
+        }
+
         protected async UniTask YieldPositionRoutine()
         {
             await UniTaskEx.WaitForSeconds(this, 0, 0.1f);
 
             List<UnitHandler> movingUnitList = UnitHandlerList.FindAll(x => x.IsStopped == false);
-            Debug.Log(movingUnitList.Count);
-
             while (movingUnitList.Count > 0)
             {
                 movingUnitList = UnitHandlerList.FindAll(x => x.IsStopped == false);
@@ -280,7 +343,8 @@ namespace _TW_Framework
                         {
                             if (overlappedHandler.IsStopped == false ||
                                 overlappedHandler.IsYielding == true ||
-                                overlappedHandler == movingUnitList[i])
+                                overlappedHandler == movingUnitList[i] ||
+                                overlappedHandler.Controller != this)
                             {
                                 continue;
                             }
@@ -320,149 +384,6 @@ namespace _TW_Framework
 
                 await UniTaskEx.WaitForSeconds(this, 0, yieldIterationInterval);
             }
-        }
-#else
-        protected async UniTask YieldPositionRoutine()
-        {
-            await UniTaskEx.WaitForSeconds(this, 0, 0.1f);
-
-            List<UnitHandler> movingUnitList = UnitHandlerList.FindAll(x => x.IsStopped == false);
-            Debug.Log(movingUnitList.Count);
-
-            while (movingUnitList.Count > 0)
-            {
-                movingUnitList = UnitHandlerList.FindAll(x => x.IsStopped == false);
-
-                for (int i = 0; i < movingUnitList.Count; i++)
-                {
-                    Vector3 middlePos = (movingUnitList[i].TargetPos + movingUnitList[i].transform.position) / 2f;
-                    DrawStartAndDestGizmoRoutine(new KeyValuePair<Vector3, Vector3>(movingUnitList[i].TargetPos, movingUnitList[i].transform.position)).Forget();
-
-                    float nearestDistance = float.MaxValue;
-                    UnitHandler nearestUnit = null;
-
-                    // Collider[] foundColliders = Physics.OverlapSphere(middlePos, yieldRadiusPerUnit * UnitSpacing);
-
-                    float length = (movingUnitList[i].TargetPos - movingUnitList[i].transform.position).magnitude;
-                    Vector3 direction = (movingUnitList[i].TargetPos - movingUnitList[i].transform.position).normalized;
-                    Ray ray = new Ray(movingUnitList[i].transform.position + new Vector3(0f, 0.5f, 0f), direction);
-                    RaycastHit[] hits = Physics.RaycastAll(ray, length);
-
-                    // DrawSphereGizmoRoutine(new KeyValuePair<Vector3, float>(middlePos, yieldRadiusPerUnit * UnitSpacing)).Forget();
-
-                    for (int j = 0; j < hits.Length; j++)
-                    {
-                        if (hits[j].collider.TryGetComponent<UnitHandler>(out UnitHandler overlappedHandler) == true)
-                        {
-                            if (overlappedHandler.IsStopped == false ||
-                                overlappedHandler.IsYielding == true ||
-                                overlappedHandler == movingUnitList[i])
-                            {
-                                continue;
-                            }
-
-                            float distance = (overlappedHandler.TargetPos - middlePos).sqrMagnitude;
-                            if (distance < nearestDistance)
-                            {
-                                nearestDistance = distance;
-                                nearestUnit = overlappedHandler;
-                            }
-                        }
-                    }
-
-                    if (nearestUnit != null)
-                    {
-                        Vector3 yieldedPos = nearestUnit.TargetPos;
-
-                        float movingUnitDistance = (movingUnitList[i].TargetPos - movingUnitList[i].transform.position).magnitude;
-                        float yieldedToStartDistance = (yieldedPos - movingUnitList[i].transform.position).magnitude;
-                        float yieldedToEndDistance = (yieldedPos - movingUnitList[i].TargetPos).magnitude;
-
-                        if (movingUnitDistance > yieldedToStartDistance &&
-                            movingUnitDistance > yieldedToEndDistance)
-                        {
-                            nearestUnit.SetTargetDestination(movingUnitList[i].TargetPos, currentFacingAngle);
-                            nearestUnit.IsYielding = true;
-                            DrawYieldedStartAndDestGizmoRoutine(new KeyValuePair<Vector3, Vector3>(movingUnitList[i].TargetPos, nearestUnit.transform.position)).Forget();
-
-                            movingUnitList[i].SetTargetDestination(yieldedPos, currentFacingAngle);
-                            movingUnitList[i].IsYielding = true;
-                            DrawYieldedStartAndDestGizmoRoutine(new KeyValuePair<Vector3, Vector3>(yieldedPos, movingUnitList[i].transform.position)).Forget();
-                        }
-                    }
-
-                    await UniTask.Yield();
-                }
-
-                await UniTaskEx.WaitForSeconds(this, 0, yieldIterationInterval);
-            }
-        }
-#endif
-
-        protected List<KeyValuePair<Vector3, float>> gizmoSphereList = new List<KeyValuePair<Vector3, float>>();
-        protected List<KeyValuePair<Vector3, Vector3>> startAndDestList = new List<KeyValuePair<Vector3, Vector3>>();
-        protected List<KeyValuePair<Vector3, Vector3>> yieldedStartAndDestList = new List<KeyValuePair<Vector3, Vector3>>();
-
-        protected async UniTaskVoid DrawSphereGizmoRoutine(KeyValuePair<Vector3, float> pair)
-        {
-            gizmoSphereList.Add(pair);
-            await UniTask.WaitForSeconds(0.1f);
-            gizmoSphereList.Remove(pair);
-        }
-
-        protected async UniTaskVoid DrawStartAndDestGizmoRoutine(KeyValuePair<Vector3, Vector3> pair)
-        {
-            startAndDestList.Add(pair);
-            await UniTask.WaitForSeconds(0.1f);
-            startAndDestList.Remove(pair);
-        }
-
-        protected async UniTaskVoid DrawYieldedStartAndDestGizmoRoutine(KeyValuePair<Vector3, Vector3> pair)
-        {
-            yieldedStartAndDestList.Add(pair);
-            await UniTask.WaitForSeconds(0.1f);
-            yieldedStartAndDestList.Remove(pair);
-        }
-
-        protected void OnDrawGizmos()
-        {
-            foreach (KeyValuePair<Vector3, float> pair in gizmoSphereList)
-            {
-                Gizmos.color = new Color(0f, 1f, 0f, 0.1f);
-                Gizmos.DrawSphere(pair.Key, pair.Value);
-            }
-
-            foreach (KeyValuePair<Vector3, Vector3> pair in startAndDestList)
-            {
-                Gizmos.color = Color.red;
-                Gizmos.DrawLine(pair.Key, pair.Value);
-            }
-
-            foreach (KeyValuePair<Vector3, Vector3> pair in yieldedStartAndDestList)
-            {
-                Gizmos.color = Color.blue;
-                Gizmos.DrawLine(pair.Key, pair.Value);
-            }
-        }
-
-        protected void OnDuringHandling(Vector3 lineStartPos, Vector3 lineEndPos, float lineLength)
-        {
-            if (lineLength > MAX_FORMABLE_THRESHOLD)
-            {
-                float _unitsPerRowUnclamped = lineLength / UnitSpacing;
-                int _unitsPerRow = (int)(lineLength / UnitSpacing);
-                this._unitsPerRowRemained = _unitsPerRowUnclamped - _unitsPerRow;
-
-                _unitsPerRow = Mathf.Clamp(_unitsPerRow, 1, int.MaxValue);
-                this.UnitsPerRow = _unitsPerRow;
-            }
-
-            ReinstantiateFormation();
-        }
-
-        protected void OnEndHandling(Vector3 lineStartPos, Vector3 lineEndPos)
-        {
-            ApplyMouseFormationing(lineStartPos, lineEndPos);
         }
 
         public void ChangeUnitFormation(Type formationType)
@@ -500,8 +421,6 @@ namespace _TW_Framework
 
             ApplyCurrentUnitFormation();
         }
-
-        protected float currentFacingAngle;
 
         protected void ApplyCurrentUnitFormation()
         {
@@ -586,5 +505,72 @@ namespace _TW_Framework
                 _currentFormation = new ConeFormation(UnitSpacing, IsPivotInMiddle);
             }
         }
+
+        public Vector3 GetMiddlePos()
+        {
+            Vector3 middlePos = Vector3.zero;
+            foreach (UnitHandler unit in UnitHandlerList)
+            {
+                middlePos += unit.transform.position;
+            }
+
+            return middlePos / UnitHandlerList.Count;
+        }
+
+#if UNITY_EDITOR
+        protected List<KeyValuePair<Vector3, float>> gizmoSphereList = new List<KeyValuePair<Vector3, float>>();
+        protected List<KeyValuePair<Vector3, Vector3>> startAndDestList = new List<KeyValuePair<Vector3, Vector3>>();
+        protected List<KeyValuePair<Vector3, Vector3>> yieldedStartAndDestList = new List<KeyValuePair<Vector3, Vector3>>();
+
+        protected async UniTaskVoid DrawSphereGizmoRoutine(KeyValuePair<Vector3, float> pair)
+        {
+            gizmoSphereList.Add(pair);
+            await UniTask.WaitForSeconds(0.1f);
+            gizmoSphereList.Remove(pair);
+        }
+
+        protected async UniTaskVoid DrawStartAndDestGizmoRoutine(KeyValuePair<Vector3, Vector3> pair)
+        {
+            startAndDestList.Add(pair);
+            await UniTask.WaitForSeconds(0.1f);
+            startAndDestList.Remove(pair);
+        }
+
+        protected async UniTaskVoid DrawYieldedStartAndDestGizmoRoutine(KeyValuePair<Vector3, Vector3> pair)
+        {
+            yieldedStartAndDestList.Add(pair);
+            await UniTask.WaitForSeconds(0.1f);
+            yieldedStartAndDestList.Remove(pair);
+        }
+
+        protected void OnDrawGizmos()
+        {
+            if (Application.isPlaying == true)
+            {
+                foreach (KeyValuePair<Vector3, float> pair in gizmoSphereList)
+                {
+                    Gizmos.color = new Color(0f, 1f, 0f, 0.1f);
+                    Gizmos.DrawSphere(pair.Key, pair.Value);
+                }
+
+                foreach (KeyValuePair<Vector3, Vector3> pair in startAndDestList)
+                {
+                    Gizmos.color = Color.red;
+                    Gizmos.DrawLine(pair.Key, pair.Value);
+                }
+
+                foreach (KeyValuePair<Vector3, Vector3> pair in yieldedStartAndDestList)
+                {
+                    Gizmos.color = Color.blue;
+                    Gizmos.DrawLine(pair.Key, pair.Value);
+                }
+            }
+            else
+            {
+                Gizmos.color = Color.red;
+                Gizmos.DrawLine(initialLineStartT.position, initialLineEndT.position);
+            }
+        }
+#endif
     }
 }

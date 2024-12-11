@@ -1,4 +1,5 @@
 using System.Collections.Generic;
+using Unity.VisualScripting;
 using UnityEngine;
 
 namespace _TW_Framework
@@ -26,6 +27,7 @@ namespace _TW_Framework
             _mouseEventHandler.OnStartHandling += OnStartHandling;
             _mouseEventHandler.OnDuringHandling += OnDuringHandling;
             _mouseEventHandler.OnEndHandling += OnEndHandling;
+            _controller.OnControllerInitialized += OnControllerInitialized;
             _controller.OnUnitCountChanged += OnUnitCountChanged;
    
             for (int i = 0; i < _controller.UnitHandlerList.Count; i++)
@@ -41,6 +43,7 @@ namespace _TW_Framework
         protected void OnDestroy()
         {
             _controller.OnUnitCountChanged -= OnUnitCountChanged;
+            _controller.OnControllerInitialized -= OnControllerInitialized;
             _mouseEventHandler.OnEndHandling -= OnEndHandling;
             _mouseEventHandler.OnDuringHandling -= OnDuringHandling;
             _mouseEventHandler.OnStartHandling -= OnStartHandling;
@@ -52,6 +55,25 @@ namespace _TW_Framework
             {
                 isEventOn = !isEventOn;
                 SetSilhouettesActive(isEventOn);
+            }
+        }
+
+        protected void OnControllerInitialized(Vector3 startPos, Vector3 endPos)
+        {
+            Vector3 leftDirection = Vector3.Cross(endPos - startPos, Vector3.up);
+            float _length = (endPos - startPos).magnitude;
+            _length = Mathf.Clamp(_length, 0.001f, float.MaxValue);
+
+            float normalizedRemained = _controller.UnitsPerRowRemained / _length;
+            Vector3 middlePos = Vector3.LerpUnclamped(startPos, endPos, 0.5f - normalizedRemained);
+
+            float facingAngle = Mathf.Atan2(leftDirection.x, leftDirection.z) * Mathf.Rad2Deg;
+            List<Vector3> posList = FormationPositionerEx.GetAlignedPositionList(silhouetteObjList.Count, _controller.CurrentFormation, middlePos, facingAngle);
+
+            for (int i = 0; i < silhouetteObjList.Count; i++)
+            {
+                silhouetteObjList[i].transform.position = posList[i];
+                silhouetteObjList[i].transform.eulerAngles = new Vector3(0f, facingAngle, 0f);
             }
         }
 
