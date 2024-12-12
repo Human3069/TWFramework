@@ -267,6 +267,7 @@ MonoBehaviour:
     reloadingRemained: 0
     rangedAttackRange: 100
     rangedAttackAngle: 45
+    accuracy: 1
     maxAmmoCount: 30
     currentAmmoCount: 0
 --- !u!195 &8091776970705940154

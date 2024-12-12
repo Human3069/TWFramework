@@ -74,12 +74,12 @@ namespace _TW_Framework
 
             CurrentMouseZoom = mouseZoomRange.x;
 
-            while (this.gameObject.activeSelf == true)
+            while (this.enabled == true)
             {
                 HandleKeyInput();
                 HandleMouseWheelInput();
 
-                await UniTask.Yield();
+                await UniTask.Yield(this.destroyCancellationToken);
             }
         }
 

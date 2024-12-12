@@ -140,6 +140,14 @@ namespace _TW_Framework
         [SerializeField]
         protected RangedAttack rangedAttack;
 
+        public Vector3 MiddlePos
+        {
+            get
+            {
+                return this.transform.position + Vector3.up;
+            }
+        }
+
         public bool IsValid
         {
             get
@@ -171,6 +179,8 @@ namespace _TW_Framework
 
         protected void OnDestroy()
         {
+            UniTaskEx.Cancel(this, 0);
+
             meleeAttack = null;
             rangedAttack = null;
         }
@@ -274,7 +284,7 @@ namespace _TW_Framework
                 }
             }
 
-            public async UniTaskVoid SeekToMeleeAttackAsync()
+            public async UniTask SeekToMeleeAttackAsync()
             {
                 while (MeleeAttackingUnit == null && _unitHandler.IsDead == false && _unitHandler._UnitState == UnitState.Idle)
                 {
@@ -297,7 +307,7 @@ namespace _TW_Framework
                 }
             }
 
-            protected async UniTaskVoid MeleeAttackAsync()
+            protected async UniTask MeleeAttackAsync()
             {
                 while (MeleeAttackingUnit != null && (_unitHandler._UnitState == UnitState.Idle || _unitHandler._UnitState == UnitState.MeleeAttacking) && _unitHandler.IsDead == false)
                 {
@@ -348,6 +358,10 @@ namespace _TW_Framework
 
             [Space(10)]
             [SerializeField]
+            protected float accuracy = 100f; // ranged 0 ~ 100
+
+            [Space(10)]
+            [SerializeField]
             protected int maxAmmoCount = 5;
             [ReadOnly]
             [SerializeField]
@@ -373,7 +387,7 @@ namespace _TW_Framework
                 }
             }
 
-            public async UniTaskVoid SeekToRangedAttackAsync()
+            public async UniTask SeekToRangedAttackAsync()
             {
                 while (RangedAttackingUnit == null && _unitHandler.IsDead == false && _unitHandler._UnitState == UnitState.Idle && currentAmmoCount > 0)
                 {
@@ -402,7 +416,7 @@ namespace _TW_Framework
                 }
             }
 
-            protected async UniTaskVoid RangedAttackAsync()
+            protected async UniTask RangedAttackAsync()
             {
                 while (RangedAttackingUnit != null && (_unitHandler._UnitState == UnitState.Idle || _unitHandler._UnitState == UnitState.RangedAttacking) && _unitHandler.IsDead == false && currentAmmoCount > 0)
                 {
@@ -412,7 +426,7 @@ namespace _TW_Framework
                         await UniTaskEx.Yield(_unitHandler, 0);
                     }
 
-                    if (_unitHandler.IsValid == false)
+                    if (_unitHandler.IsValid == false || RangedAttackingUnit.IsValid == false)
                     {
                         break;
                     }
@@ -423,16 +437,20 @@ namespace _TW_Framework
                     {
                         _unitHandler.muzzleFlash.Play();
 
-                        PoolerType.MusketBullet.EnablePool(BeforePool);
-                        void BeforePool(GameObject poolObj)
+                        PoolerType.MusketBullet.EnablePool<BulletHandler>(BeforePool);
+                        void BeforePool(BulletHandler bullet)
                         {
-                            poolObj.transform.position = _unitHandler.muzzleFlash.transform.position;
-                            poolObj.transform.LookAt(RangedAttackingUnit.transform);
+                            bullet.Initialize(_unitHandler._TeamType, rangedAttackDamage);
+
+                            Vector3 maxRandomed = new Vector3(UnityEngine.Random.Range(-5f, 5f), UnityEngine.Random.Range(-5f, 5f), 0f);
+                            Vector3 accuracyApplied = Vector3.Lerp(maxRandomed, Vector3.zero, accuracy / 100f);
+
+                            bullet.transform.position = _unitHandler.muzzleFlash.transform.position;
+                            Vector3 direction = (RangedAttackingUnit.MiddlePos - _unitHandler.MiddlePos).normalized;
+                            bullet.transform.eulerAngles = Quaternion.LookRotation(direction).eulerAngles + accuracyApplied;
                         }
                     }
 
-                    IDamageable damageable = RangedAttackingUnit;
-                    damageable.TakeDamage(rangedAttackDamage);
                     currentAmmoCount--;
 
                     reloadingRemained = UnityEngine.Random.Range(rangedAttackSpeed - 0.5f, rangedAttackSpeed + 0.5f);

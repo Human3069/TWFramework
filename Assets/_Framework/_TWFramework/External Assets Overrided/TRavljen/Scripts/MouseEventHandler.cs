@@ -2,6 +2,8 @@ using Cysharp.Threading.Tasks;
 using System.Collections;
 using System.Collections.Generic;
 using UnityEngine;
+using UnityEngine.EventSystems;
+using UnityEngine.UI;
 
 namespace _TW_Framework
 {
@@ -11,6 +13,8 @@ namespace _TW_Framework
         protected Camera _camera;
         [SerializeField]
         protected LineRenderer _lineRenderer;
+        [SerializeField]
+        protected GraphicRaycaster graphicRaycaster;
 
         [Space(10)]
         [SerializeField]
@@ -77,6 +81,18 @@ namespace _TW_Framework
 
         protected void Update()
         {
+            PointerEventData pointerEventData = new PointerEventData(EventSystem.current);
+            pointerEventData.position = Input.mousePosition;
+
+            List<RaycastResult> raycastResultList = new List<RaycastResult>();
+            graphicRaycaster.Raycast(pointerEventData, raycastResultList);
+
+            // UI 호버링 중일 땐 MouseEventHandler 동작하지 않게 막음.
+            if (raycastResultList.Count > 0)
+            {
+                return;
+            }
+
             // Take Cast Sphere Damage
             if (Input.GetMouseButtonDown(0) == true)
             {

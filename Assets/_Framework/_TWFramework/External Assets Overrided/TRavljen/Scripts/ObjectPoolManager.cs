@@ -117,6 +117,21 @@ namespace _TW_Framework._Pool_Internal
             return obj;
         }
 
+        internal T EnableObj<T>(Action<T> beforeEnableAction = null) where T : MonoBehaviour
+        {
+            if (poolQueue.TryDequeue(out GameObject obj) == false)
+            {
+                obj = GameObject.Instantiate(prefab, allocatedT);
+            }
+
+            T component = obj.GetComponent<T>();
+
+            beforeEnableAction?.Invoke(component);
+            obj.SetActive(true);
+
+            return component;
+        }
+
         internal void DisableObj(GameObject obj)
         {
             obj.SetActive(false);
@@ -130,6 +145,12 @@ namespace _TW_Framework._Pool_Internal
         {
             GameObject pooledObj = ObjectPoolManager.Instance.GetPoolHandler(type).EnableObj(beforeEnableAction);
             return pooledObj;
+        }
+
+        public static T EnablePool<T>(this PoolerType type, Action<T> beforeEnableAction = null) where T : MonoBehaviour
+        {
+            T pooledComponent = ObjectPoolManager.Instance.GetPoolHandler(type).EnableObj(beforeEnableAction);
+            return pooledComponent;
         }
 
         public static void ReturnPool(this GameObject obj, PoolerType type)
