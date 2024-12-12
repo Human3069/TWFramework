@@ -249,13 +249,25 @@ MonoBehaviour:
   m_EditorClassIdentifier: 
   Controller: {fileID: 0}
   _TeamType: 0
+  _unitState: 1
   maxHealth: 100
   _currentHealth: 0
-  meleeDamage: 10
-  FightingUnit: {fileID: 0}
+  muzzleFlash: {fileID: 0}
   FacingRotationEnabled: 1
   IsYielding: 0
   IsDead: 0
+  meleeAttack:
+    MeleeAttackingUnit: {fileID: 0}
+    meleeAttackDamage: 10
+    meleeAttackSpeed: 1
+  rangedAttack:
+    RangedAttackingUnit: {fileID: 0}
+    rangedAttackDamage: 10
+    rangedAttackSpeed: 1
+    rangedAttackRange: 10
+    rangedAttackAngle: 45
+    maxAmmoCount: 5
+    currentAmmoCount: 0
 --- !u!195 &8091776970705940154
 NavMeshAgent:
   m_ObjectHideFlags: 0
@@ -313,6 +325,8 @@ Animation:
   m_Animation: {fileID: 7400000, guid: a705432219c3dc144ac07a4ed9b419d6, type: 2}
   m_Animations:
   - {fileID: 7400000, guid: a705432219c3dc144ac07a4ed9b419d6, type: 2}
+  - {fileID: 7400000, guid: 1eefe53a0d35f79469312af3e12c8a69, type: 2}
+  - {fileID: 7400000, guid: e4d24aa3d1f026948a2982d998462dd5, type: 2}
   m_WrapMode: 0
   m_PlayAutomatically: 0
   m_AnimatePhysics: 0

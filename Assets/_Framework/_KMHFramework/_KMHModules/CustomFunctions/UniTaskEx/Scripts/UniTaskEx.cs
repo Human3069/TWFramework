@@ -65,13 +65,20 @@ public class UniTaskEx
     // 이 밑은 같은 패턴으로 직접 추가하여 구현해야 합니다. 많이 쓰는것만 일단 해놓음
     public static UniTask NextFrame(MonoBehaviour monoBehaviour, int index)
     {
-        Initialize(monoBehaviour, index);
+        if (monoBehaviour == null)
+        {
+            return UniTask.CompletedTask;
+        }
+        else
+        {
+            Initialize(monoBehaviour, index);
 
-        int id = monoBehaviour.GetInstanceID();
-        string cancelKey = id + "_" + monoBehaviour.GetType() + "_" + index;
-        CancellationToken currentToken = tokenSourceDic[cancelKey].Token;
+            int id = monoBehaviour.GetInstanceID();
+            string cancelKey = id + "_" + monoBehaviour.GetType() + "_" + index;
+            CancellationToken currentToken = tokenSourceDic[cancelKey].Token;
 
-        return UniTask.NextFrame(currentToken);
+            return UniTask.NextFrame(currentToken);
+        }
     }
 
     public static UniTask NextFrame(string key)
@@ -82,15 +89,48 @@ public class UniTaskEx
         return UniTask.NextFrame(currentToken);
     }
 
+    public static UniTask Yield(MonoBehaviour monoBehaviour, int index)
+    {
+        if (monoBehaviour == null)
+        {
+            return UniTask.CompletedTask;
+        }
+        else
+        {
+            Initialize(monoBehaviour, index);
+
+            int id = monoBehaviour.GetInstanceID();
+            string cancelKey = id + "_" + monoBehaviour.GetType() + "_" + index;
+            CancellationToken currentToken = tokenSourceDic[cancelKey].Token;
+
+            return UniTask.Yield(currentToken);
+        }
+    }
+
+    public static UniTask Yield(string key)
+    {
+        Initialize(key);
+        CancellationToken currentToken = tokenSourceDic[key].Token;
+
+        return UniTask.Yield(currentToken);
+    }
+
     public static UniTask WaitForSeconds(MonoBehaviour monoBehaviour, int index, float duration, bool ignoreTimeScale = false, PlayerLoopTiming delayTiming = PlayerLoopTiming.Update)
     {
-        Initialize(monoBehaviour, index);
+        if (monoBehaviour == null)
+        {
+            return UniTask.CompletedTask;
+        }
+        else
+        {
+            Initialize(monoBehaviour, index);
 
-        int id = monoBehaviour.GetInstanceID();
-        string cancelKey = id + "_" + monoBehaviour.GetType() + "_" + index;
-        CancellationToken currentToken = tokenSourceDic[cancelKey].Token;
+            int id = monoBehaviour.GetInstanceID();
+            string cancelKey = id + "_" + monoBehaviour.GetType() + "_" + index;
+            CancellationToken currentToken = tokenSourceDic[cancelKey].Token;
 
-        return UniTask.WaitForSeconds(duration, ignoreTimeScale, delayTiming, currentToken);
+            return UniTask.WaitForSeconds(duration, ignoreTimeScale, delayTiming, currentToken);
+        }
     }
 
     public static UniTask WaitForSeconds(string key, float duration, bool ignoreTimeScale = false, PlayerLoopTiming delayTiming = PlayerLoopTiming.Update)
@@ -103,13 +143,20 @@ public class UniTaskEx
 
     public static UniTask WaitForFixedUpdate(MonoBehaviour monoBehaviour, int index)
     {
-        Initialize(monoBehaviour, index);
+        if (monoBehaviour == null)
+        {
+            return UniTask.CompletedTask;
+        }
+        else
+        {
+            Initialize(monoBehaviour, index);
 
-        int id = monoBehaviour.GetInstanceID();
-        string cancelKey = id + "_" + monoBehaviour.GetType() + "_" + index;
-        CancellationToken currentToken = tokenSourceDic[cancelKey].Token;
+            int id = monoBehaviour.GetInstanceID();
+            string cancelKey = id + "_" + monoBehaviour.GetType() + "_" + index;
+            CancellationToken currentToken = tokenSourceDic[cancelKey].Token;
 
-        return UniTask.WaitForFixedUpdate(currentToken);
+            return UniTask.WaitForFixedUpdate(currentToken);
+        }
     }
 
     public static UniTask WaitForFixedUpdate(string key)
@@ -122,13 +169,20 @@ public class UniTaskEx
 
     public static UniTask WaitUntil(MonoBehaviour monoBehaviour, int index, Func<bool> predicate, PlayerLoopTiming delayTiming = PlayerLoopTiming.Update)
     {
-        Initialize(monoBehaviour, index);
+        if (monoBehaviour == null)
+        {
+            return UniTask.CompletedTask;
+        }
+        else
+        {
+            Initialize(monoBehaviour, index);
 
-        int id = monoBehaviour.GetInstanceID();
-        string cancelKey = id + "_" + monoBehaviour.GetType() + "_" + index;
-        CancellationToken currentToken = tokenSourceDic[cancelKey].Token;
+            int id = monoBehaviour.GetInstanceID();
+            string cancelKey = id + "_" + monoBehaviour.GetType() + "_" + index;
+            CancellationToken currentToken = tokenSourceDic[cancelKey].Token;
 
-        return UniTask.WaitUntil(predicate, delayTiming, currentToken);
+            return UniTask.WaitUntil(predicate, delayTiming, currentToken);
+        }
     }
 
     public static UniTask WaitUntil(string key, Func<bool> predicate, PlayerLoopTiming delayTiming = PlayerLoopTiming.Update)
@@ -141,13 +195,20 @@ public class UniTaskEx
 
     public static UniTask WaitWhile(MonoBehaviour monoBehaviour, int index, Func<bool> predicate, PlayerLoopTiming timing = PlayerLoopTiming.Update)
     {
-        Initialize(monoBehaviour, index);
+        if (monoBehaviour == null)
+        {
+            return UniTask.CompletedTask;
+        }
+        else
+        {
+            Initialize(monoBehaviour, index);
 
-        int id = monoBehaviour.GetInstanceID();
-        string cancelKey = id + "_" + monoBehaviour.GetType() + "_" + index;
-        CancellationToken currentToken = tokenSourceDic[cancelKey].Token;
+            int id = monoBehaviour.GetInstanceID();
+            string cancelKey = id + "_" + monoBehaviour.GetType() + "_" + index;
+            CancellationToken currentToken = tokenSourceDic[cancelKey].Token;
 
-        return UniTask.WaitWhile(predicate, timing, currentToken);
+            return UniTask.WaitWhile(predicate, timing, currentToken);
+        }
     }
 
     public static UniTask WaitWhile(string key, Func<bool> predicate, PlayerLoopTiming timing = PlayerLoopTiming.Update)

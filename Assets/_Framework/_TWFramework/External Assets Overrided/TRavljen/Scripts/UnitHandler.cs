@@ -1,9 +1,21 @@
-﻿using Cysharp.Threading.Tasks;
+﻿using _TW_Framework._Pool_Internal;
+using Cysharp.Threading.Tasks;
+using DG.Tweening;
+using System;
 using UnityEngine;
 using UnityEngine.AI;
 
 namespace _TW_Framework
 {
+    public enum UnitState
+    {
+        Idle,
+        Moving,
+        MeleeAttacking,
+        RangedAttacking,
+        Dead
+    }
+
     [RequireComponent(typeof(Animation))]
     [RequireComponent(typeof(NavMeshAgent))]
     public class UnitHandler : MonoBehaviour, IDamageable
@@ -15,6 +27,31 @@ namespace _TW_Framework
         public FormationController Controller;
         [HideInInspector]
         public TeamType _TeamType;
+
+        [ReadOnly]
+        [SerializeField]
+        protected UnitState _unitState = UnitState.Idle;
+        public UnitState _UnitState
+        {
+            get
+            {
+                return _unitState;
+            }
+            set
+            {
+                if (_unitState != value)
+                {
+                    _unitState = value;
+
+                    if (OnStateChanged != null)
+                    {
+                        OnStateChanged.Invoke(value);
+                    }
+                }
+            }
+        }
+
+        public Action<UnitState> OnStateChanged;
 
         [Header("=== IDamageable ===")]
         [SerializeField]
@@ -39,25 +76,7 @@ namespace _TW_Framework
 
         [Space(10)]
         [SerializeField]
-        protected float meleeAttackDamage = 10f;
-        [SerializeField]
-        protected float meleeAttackSpeed = 1f;
-
-        [Space(10)]
-        [SerializeField]
-        protected float rangedAttackDamage = 10f;
-        [SerializeField]
-        protected float rangedAttackSpeed = 1f;
-        [SerializeField]
-        protected float rangedAttackRange = 10f;
-        [SerializeField]
-        protected float rangedAttackAngle = 45f;
-
-        [Space(10)]
-        [ReadOnly]
-        public UnitHandler MeleeAttackingUnit;
-        [ReadOnly]
-        public UnitHandler RangedAttackingUnit;
+        protected ParticleSystem muzzleFlash;
 
         protected float facingAngle = 0f;
         protected bool faceOnDestination = false;
@@ -66,7 +85,7 @@ namespace _TW_Framework
 
         [HideInInspector]
         public bool FacingRotationEnabled = true;
-        
+
         public bool IsWithinStoppingDistance
         {
             get
@@ -91,6 +110,12 @@ namespace _TW_Framework
                     if (value == true)
                     {
                         IsYielding = false;
+                        _UnitState = UnitState.Idle;
+                    }
+                    else
+                    {
+                        _UnitState = UnitState.Moving;
+                        UniTaskEx.Cancel(this, 0);
                     }
                 }
             }
@@ -109,10 +134,45 @@ namespace _TW_Framework
         [HideInInspector]
         public bool IsDead = false;
 
+        [Space(10)]
+        [SerializeField]
+        protected MeleeAttack meleeAttack;
+        [SerializeField]
+        protected RangedAttack rangedAttack;
+
+        public bool IsValid
+        {
+            get
+            {
+                try
+                {
+                    return this.transform != null &&
+                           this.gameObject != null &&
+                            _animation != null &&
+                           _agent != null &&
+                           IsDead == false &&
+                           CurrentHealth != 0f;
+                }
+                catch
+                {
+                    return false;
+                }
+            }
+        }
+
         protected void Awake()
         {
             _animation = this.GetComponent<Animation>();
             _agent = this.GetComponent<NavMeshAgent>();
+
+            meleeAttack.Initialize(this);
+            rangedAttack.Initialize(this);
+        }
+
+        protected void OnDestroy()
+        {
+            meleeAttack = null;
+            rangedAttack = null;
         }
 
         public void Initialize(FormationController controller, TeamType teamType)
@@ -123,90 +183,6 @@ namespace _TW_Framework
             this._TeamType = teamType;
 
             CurrentHealth = maxHealth;
-        }
-
-        protected void OnEnable()
-        {
-            SeekToMeleeAttackAsync().Forget();
-            SeekToRangeAttackAsync().Forget();
-        }
-
-        protected async UniTaskVoid SeekToMeleeAttackAsync()
-        {
-            while (MeleeAttackingUnit == null && IsDead == false)
-            {
-                Collider[] overlappedColliders = Physics.OverlapSphere(this.transform.position, 2f);
-                foreach (Collider overlappedCollider in overlappedColliders)
-                {
-                    if (overlappedCollider.TryGetComponent<UnitHandler>(out UnitHandler unitHandler) == true)
-                    {
-                        if (unitHandler._TeamType != this._TeamType)
-                        {
-                            MeleeAttackingUnit = unitHandler;
-                            MeleeAttackAsync().Forget();
-                        
-                            return;
-                        }
-                    }
-                }
-
-                await UniTask.WaitForSeconds(0.5f);
-            }
-        }
-
-        protected async UniTaskVoid SeekToRangeAttackAsync()
-        {
-            while (RangedAttackingUnit == null && IsDead == false)
-            {
-                Collider[] overlappedColliders = Physics.OverlapSphere(this.transform.position, rangedAttackRange);
-                foreach (Collider overlappedCollider in overlappedColliders)
-                {
-                    Vector3 directionToTarget = (overlappedCollider.transform.position - transform.position).normalized;
-                    float angleToTarget = Vector3.Angle(transform.forward, directionToTarget);
-
-                    if (angleToTarget < rangedAttackAngle * 0.5f)
-                    {
-                        if (overlappedCollider.TryGetComponent<UnitHandler>(out UnitHandler unitHandler) == true)
-                        {
-                            if (unitHandler._TeamType != this._TeamType)
-                            {
-                                RangedAttackingUnit = unitHandler;
-                                RangedAttackAsync().Forget();
-
-                                return;
-                            }
-                        }
-                    }
-                }
-
-                await UniTask.WaitForSeconds(0.5f);
-            }
-        }
-
-        public async UniTaskVoid MeleeAttackAsync()
-        {
-            while (MeleeAttackingUnit != null && IsDead == false)
-            {
-                IDamageable damageable = MeleeAttackingUnit;
-                damageable.TakeDamage(meleeAttackDamage);
-
-                await UniTask.WaitForSeconds(meleeAttackSpeed);
-            }
-
-            SeekToMeleeAttackAsync().Forget();
-        }
-
-        public async UniTaskVoid RangedAttackAsync()
-        {
-            while (RangedAttackingUnit != null && IsDead == false)
-            {
-                IDamageable damageable = RangedAttackingUnit;
-                damageable.TakeDamage(rangedAttackRange);
-
-                await UniTask.WaitForSeconds(rangedAttackSpeed);
-            }
-
-            SeekToRangeAttackAsync().Forget();
         }
 
         protected void Update()
@@ -259,6 +235,223 @@ namespace _TW_Framework
         void IDamageable.OnDamaged()
         {
             _animation.PlayQueued("OnDamaged");
+        }
+
+        public void PlayAnimation(string clipName)
+        {
+            _animation.PlayQueued(clipName);
+        }
+
+        [System.Serializable]
+        public class MeleeAttack
+        {
+            protected UnitHandler _unitHandler;
+
+            [ReadOnly]
+            public UnitHandler MeleeAttackingUnit;
+
+            [Space(10)]
+            [SerializeField]
+            protected float meleeAttackDamage = 10f;
+            [SerializeField]
+            protected float meleeAttackSpeed = 1f;
+
+            public virtual void Initialize(UnitHandler unitHandler)
+            {
+                _unitHandler = unitHandler;
+                _unitHandler.OnStateChanged += OnStateChanged;
+            }
+
+            protected void OnStateChanged(UnitState unitState)
+            {
+                if (unitState == UnitState.Idle)
+                {
+                    SeekToMeleeAttackAsync().Forget();
+                }
+                else if (unitState == UnitState.Moving)
+                {
+                    MeleeAttackingUnit = null;
+                }
+            }
+
+            public async UniTaskVoid SeekToMeleeAttackAsync()
+            {
+                while (MeleeAttackingUnit == null && _unitHandler.IsDead == false && _unitHandler._UnitState == UnitState.Idle)
+                {
+                    Collider[] overlappedColliders = Physics.OverlapSphere(_unitHandler.transform.position, 2f);
+                    foreach (Collider overlappedCollider in overlappedColliders)
+                    {
+                        if (overlappedCollider.TryGetComponent<UnitHandler>(out UnitHandler unitHandler) == true)
+                        {
+                            if (unitHandler._TeamType != _unitHandler._TeamType)
+                            {
+                                MeleeAttackingUnit = unitHandler;
+                                MeleeAttackAsync().Forget();
+
+                                return;
+                            }
+                        }
+                    }
+
+                    await UniTaskEx.WaitForSeconds(_unitHandler, 0, UnityEngine.Random.Range(0.4f, 0.6f));
+                }
+            }
+
+            protected async UniTaskVoid MeleeAttackAsync()
+            {
+                while (MeleeAttackingUnit != null && (_unitHandler._UnitState == UnitState.Idle || _unitHandler._UnitState == UnitState.MeleeAttacking) && _unitHandler.IsDead == false)
+                {
+                    _unitHandler._UnitState = UnitState.MeleeAttacking;
+                    _unitHandler.PlayAnimation("MeleeAttack");
+
+                    IDamageable damageable = MeleeAttackingUnit;
+                    damageable.TakeDamage(meleeAttackDamage);
+
+                    await UniTaskEx.WaitForSeconds(_unitHandler, 0, UnityEngine.Random.Range(meleeAttackSpeed - 0.5f, meleeAttackSpeed + 0.5f));
+                }
+
+                if (_unitHandler.IsStopped == true)
+                {
+                    _unitHandler._UnitState = UnitState.Idle;
+                }
+                else
+                {
+                    _unitHandler._UnitState = UnitState.Moving;
+                }
+            }
+        }
+
+        [System.Serializable]
+        public class RangedAttack
+        {
+            protected UnitHandler _unitHandler;
+
+            [ReadOnly]
+            public UnitHandler RangedAttackingUnit;
+
+            [Space(10)]
+            [SerializeField]
+            protected float rangedAttackDamage = 10f;
+            [SerializeField]
+            protected float rangedAttackSpeed = 1f;
+
+            [Space(10)]
+            [ReadOnly]
+            [SerializeField]
+            protected float reloadingRemained;
+
+            [Space(10)]
+            [SerializeField]
+            protected float rangedAttackRange = 10f;
+            [SerializeField]
+            protected float rangedAttackAngle = 45f;
+
+            [Space(10)]
+            [SerializeField]
+            protected int maxAmmoCount = 5;
+            [ReadOnly]
+            [SerializeField]
+            protected int currentAmmoCount;
+
+            public virtual void Initialize(UnitHandler unitHandler)
+            {
+                _unitHandler = unitHandler;
+                _unitHandler.OnStateChanged += OnStateChanged;
+
+                currentAmmoCount = maxAmmoCount;
+            }
+
+            protected void OnStateChanged(UnitState unitState)
+            {
+                if (unitState == UnitState.Idle)
+                {
+                    SeekToRangedAttackAsync().Forget();
+                }
+                else if (unitState == UnitState.Moving)
+                {
+                    RangedAttackingUnit = null;
+                }
+            }
+
+            public async UniTaskVoid SeekToRangedAttackAsync()
+            {
+                while (RangedAttackingUnit == null && _unitHandler.IsDead == false && _unitHandler._UnitState == UnitState.Idle && currentAmmoCount > 0)
+                {
+                    Collider[] overlappedColliders = Physics.OverlapSphere(_unitHandler.transform.position, rangedAttackRange);
+                    foreach (Collider overlappedCollider in overlappedColliders)
+                    {
+                        Vector3 directionToTarget = (overlappedCollider.transform.position - _unitHandler.transform.position).normalized;
+                        float angleToTarget = Vector3.Angle(_unitHandler.transform.forward, directionToTarget);
+
+                        if (angleToTarget < rangedAttackAngle * 0.5f)
+                        {
+                            if (overlappedCollider.TryGetComponent<UnitHandler>(out UnitHandler unitHandler) == true)
+                            {
+                                if (unitHandler._TeamType != _unitHandler._TeamType)
+                                {
+                                    RangedAttackingUnit = unitHandler;
+                                    RangedAttackAsync().Forget();
+
+                                    return;
+                                }
+                            }
+                        }
+                    }
+
+                    await UniTaskEx.WaitForSeconds(_unitHandler, 0, UnityEngine.Random.Range(0.4f, 0.6f));
+                }
+            }
+
+            protected async UniTaskVoid RangedAttackAsync()
+            {
+                while (RangedAttackingUnit != null && (_unitHandler._UnitState == UnitState.Idle || _unitHandler._UnitState == UnitState.RangedAttacking) && _unitHandler.IsDead == false && currentAmmoCount > 0)
+                {
+                    while (reloadingRemained > 0f)
+                    {
+                        reloadingRemained -= Time.deltaTime;
+                        await UniTaskEx.Yield(_unitHandler, 0);
+                    }
+
+                    if (_unitHandler.IsValid == false)
+                    {
+                        break;
+                    }
+
+                    _unitHandler._UnitState = UnitState.RangedAttacking;
+                    _unitHandler.PlayAnimation("RangedAttack");
+                    if (_unitHandler.muzzleFlash != null)
+                    {
+                        _unitHandler.muzzleFlash.Play();
+
+                        PoolerType.MusketBullet.EnablePool(BeforePool);
+                        void BeforePool(GameObject poolObj)
+                        {
+                            poolObj.transform.position = _unitHandler.muzzleFlash.transform.position;
+                            poolObj.transform.LookAt(RangedAttackingUnit.transform);
+                        }
+                    }
+
+                    IDamageable damageable = RangedAttackingUnit;
+                    damageable.TakeDamage(rangedAttackDamage);
+                    currentAmmoCount--;
+
+                    reloadingRemained = UnityEngine.Random.Range(rangedAttackSpeed - 0.5f, rangedAttackSpeed + 0.5f);
+                    while (reloadingRemained > 0f)
+                    {
+                        reloadingRemained -= Time.deltaTime;
+                        await UniTaskEx.Yield(_unitHandler, 0);
+                    }
+                }
+
+                if (_unitHandler.IsStopped == true)
+                {
+                    _unitHandler._UnitState = UnitState.Idle;
+                }
+                else
+                {
+                    _unitHandler._UnitState = UnitState.Moving;
+                }
+            }
         }
     }
 }

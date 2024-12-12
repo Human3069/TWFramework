@@ -321,13 +321,18 @@ namespace _TW_Framework
         {
             await UniTaskEx.WaitForSeconds(this, 0, 0.1f);
 
-            List<UnitHandler> movingUnitList = UnitHandlerList.FindAll(x => x.IsStopped == false);
+            List<UnitHandler> movingUnitList = UnitHandlerList.FindAll(x => x.IsStopped == false && x.IsValid == true);
             while (movingUnitList.Count > 0)
             {
-                movingUnitList = UnitHandlerList.FindAll(x => x.IsStopped == false);
+                movingUnitList = UnitHandlerList.FindAll(x => x.IsStopped == false && x.IsValid == true);
 
                 for (int i = 0; i < movingUnitList.Count; i++)
                 {
+                    if (movingUnitList[i].IsValid == false)
+                    {
+                        continue;
+                    }
+
                     Vector3 middlePos = (movingUnitList[i].TargetPos + movingUnitList[i].transform.position) / 2f;
                     DrawStartAndDestGizmoRoutine(new KeyValuePair<Vector3, Vector3>(movingUnitList[i].TargetPos, movingUnitList[i].transform.position)).Forget();
 

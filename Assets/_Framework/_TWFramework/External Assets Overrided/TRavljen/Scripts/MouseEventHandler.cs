@@ -8,6 +8,8 @@ namespace _TW_Framework
     public class MouseEventHandler : MonoBehaviour
     {
         [SerializeField]
+        protected Camera _camera;
+        [SerializeField]
         protected LineRenderer _lineRenderer;
 
         [Space(10)]
@@ -78,7 +80,7 @@ namespace _TW_Framework
             // Take Cast Sphere Damage
             if (Input.GetMouseButtonDown(0) == true)
             {
-                Ray ray = Camera.main.ScreenPointToRay(Input.mousePosition);
+                Ray ray = _camera.ScreenPointToRay(Input.mousePosition);
                 if (Physics.Raycast(ray, out RaycastHit hit) == true)
                 {
                     float maxSplashRadius = 10f;
@@ -102,7 +104,7 @@ namespace _TW_Framework
 
             if (Input.GetMouseButtonDown(1) == true)
             {
-                Ray ray = Camera.main.ScreenPointToRay(Input.mousePosition);
+                Ray ray = _camera.ScreenPointToRay(Input.mousePosition);
                 Physics.Raycast(ray, out RaycastHit hit);
 
                 if (hit.collider != null &&
@@ -140,7 +142,7 @@ namespace _TW_Framework
 
             while (Input.GetMouseButton(1) == true)
             {
-                ray = Camera.main.ScreenPointToRay(Input.mousePosition);
+                ray = _camera.ScreenPointToRay(Input.mousePosition);
                 if (Physics.Raycast(ray, out _hit, Mathf.Infinity, groundLayerMask))
                 {
                     lineEndPos = _hit.point;
