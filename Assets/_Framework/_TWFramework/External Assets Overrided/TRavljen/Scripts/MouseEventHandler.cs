@@ -1,5 +1,5 @@
 using Cysharp.Threading.Tasks;
-using System.Collections;
+using System;
 using System.Collections.Generic;
 using UnityEngine;
 using UnityEngine.EventSystems;
@@ -7,6 +7,7 @@ using UnityEngine.UI;
 
 namespace _TW_Framework
 {
+    [RequireComponent(typeof(MeshCollider))]
     public class MouseEventHandler : MonoBehaviour
     {
         [SerializeField]
@@ -51,32 +52,31 @@ namespace _TW_Framework
         public delegate void StartHandling(Vector3 lineStartPos, Vector3 lineEndPos);
         public event StartHandling OnStartHandling;
 
-        public delegate void DuringHandling(Vector3 lineStartPos, Vector3 lineEndPos, float lineLength);
+        public delegate void DuringHandling(Vector3 lineStartPos, Vector3 lineEndPos);
         public event DuringHandling OnDuringHandling;
 
         public delegate void EndHandling(Vector3 lineStartPos, Vector3 lineEndPos);
         public event EndHandling OnEndHandling;
 
+        protected MeshCollider selectionMeshCollider;
+
+        public Action<List<UnitHandler>> OnSelectionListChanged;
+
+        [SerializeField]
+        protected List<UnitHandler> uniHandlerList = new List<UnitHandler>();
+
         protected void Start()
         {
             _lineRenderer.enabled = false;
+            selectionMeshCollider = this.GetComponent<MeshCollider>();
+
+            Debug.Assert(selectionMeshCollider.convex == true && selectionMeshCollider.isTrigger == true);
         }
 
-        protected List<Vector3> gizmoPosList = new List<Vector3>();
-        protected async UniTaskVoid DrawSphereForMoment(Vector3 pos)
-        {
-            gizmoPosList.Add(pos);
-            await UniTask.WaitForSeconds(0.5f);
-            gizmoPosList.Remove(pos);
-        }
 
-        protected void OnDrawGizmos()
+        protected void FixedUpdate()
         {
-            Gizmos.color = new Color(1f, 0f, 0f, 0.25f);
-            foreach (Vector3 pos in gizmoPosList)
-            {
-                Gizmos.DrawSphere(pos, 10f);
-            }
+            uniHandlerList.Clear();
         }
 
         protected void Update()
@@ -93,29 +93,9 @@ namespace _TW_Framework
                 return;
             }
 
-            // Take Cast Sphere Damage
-            if (Input.GetMouseButtonDown(0) == true)
+            if (Input.GetMouseButtonDown(0))
             {
-                Ray ray = _camera.ScreenPointToRay(Input.mousePosition);
-                if (Physics.Raycast(ray, out RaycastHit hit) == true)
-                {
-                    float maxSplashRadius = 10f;
-                    float maxDamage = 100f;
-
-                    Collider[] overlappedColliders = Physics.OverlapSphere(hit.point, maxSplashRadius);
-                    DrawSphereForMoment(hit.point).Forget();
-
-                    foreach (Collider overlappedCollider in overlappedColliders)
-                    {
-                        if (overlappedCollider.TryGetComponent<IDamageable>(out IDamageable damageable) == true)
-                        {
-                            float distance = (hit.point - overlappedCollider.transform.position).magnitude;
-                            float damage = Mathf.Lerp(maxDamage, 0f, distance / maxSplashRadius);
-
-                            damageable.TakeDamage(damage);
-                        }
-                    }
-                }
+                PostOnLeftClicked().Forget();
             }
 
             if (Input.GetMouseButtonDown(1) == true)
@@ -137,12 +117,45 @@ namespace _TW_Framework
                     IsHandling = true;
                     _lineRenderer.enabled = true;
 
-                    PostOnClicked(ray).Forget();
+                    PostOnRightClicked(ray).Forget();
                 }
             }
         }
 
-        protected async UniTaskVoid PostOnClicked(Ray ray)
+        protected async UniTaskVoid PostOnLeftClicked()
+        {
+            Vector2 startScreenPoint = Input.mousePosition;
+            uniHandlerList.Clear();
+
+            while (Input.GetMouseButton(0) == true)
+            {
+                Vector2 endScreenPoint = Input.mousePosition;
+                Pyramid selectionPyramid = new Pyramid(_camera, 200f, startScreenPoint, endScreenPoint);
+
+                Mesh pyramidMesh = selectionPyramid.GenerateMesh();
+                selectionMeshCollider.sharedMesh = pyramidMesh;
+
+                await UniTask.Yield(this.destroyCancellationToken);
+            }
+
+            selectionMeshCollider.sharedMesh = null;
+        }
+
+        protected void OnTriggerEnter(Collider collider)
+        {
+            if (collider.TryGetComponent<UnitHandler>(out UnitHandler unit) == true)
+            {
+                if (unit._TeamType == TeamType.Player)
+                {
+                    if (uniHandlerList.Contains(unit) == false)
+                    {
+                        uniHandlerList.Add(unit);
+                    }
+                }
+            }
+        }
+
+        protected async UniTaskVoid PostOnRightClicked(Ray ray)
         {
             if (Physics.Raycast(ray, out RaycastHit _hit, Mathf.Infinity, groundLayerMask))
             {
@@ -164,14 +177,13 @@ namespace _TW_Framework
                     lineEndPos = _hit.point;
                     _lineRenderer.SetPosition(1, lineEndPos + Vector3.up * 0.075f);
                 }
-                lineLength = (lineStartPos - lineEndPos).magnitude;
 
                 if (OnDuringHandling != null)
                 {
-                    OnDuringHandling(lineStartPos, lineEndPos, lineLength);
+                    OnDuringHandling(lineStartPos, lineEndPos);
                 }
 
-                await UniTask.NextFrame();
+                await UniTask.NextFrame(destroyCancellationToken);
             }
 
             IsHandling = false;

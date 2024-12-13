@@ -1,4 +1,6 @@
+using System;
 using UnityEngine;
+using UnityEngine.UIElements;
 
 namespace _TW_Framework
 {
@@ -7,29 +9,46 @@ namespace _TW_Framework
         [Header("=== PlayerFormationController ===")]
         [SerializeField]
         protected MouseEventHandler mouseEventHandler;
+       
+        [Space(10)]
+        [ReadOnly]
+        public int SelectedIndex = -1;
+        [ReadOnly]
+        [SerializeField]
+        public Vector2 selectedNormalRange = new Vector2(-1f, -1f);
 
-        protected virtual void Awake()
+        public Action OnSelectedAction;
+        public Action OnDeselectedAction;
+
+        public void Initialize(int selectedIndex)
         {
-            mouseEventHandler.OnDuringHandling += OnDuringHandling;
-            mouseEventHandler.OnEndHandling += OnEndHandling;
-
-            mouseEventHandler.OnClickEnemyHandler += OnClickEnemyHandler;
+            SelectedIndex = selectedIndex;
         }
 
-        protected virtual void OnDestroy()
+        public (Vector3, Vector3) GetControlPoints(Vector3 lineStartPos, Vector3 lineEndPos)
         {
-            mouseEventHandler.OnClickEnemyHandler -= OnClickEnemyHandler;
+            Vector3 controlStartPos = Vector3.Lerp(lineStartPos, lineEndPos, selectedNormalRange.x);
+            Vector3 controlEndPos = Vector3.Lerp(lineStartPos, lineEndPos, selectedNormalRange.y);
 
-            mouseEventHandler.OnEndHandling -= OnEndHandling;
-            mouseEventHandler.OnDuringHandling -= OnDuringHandling;
+            return (controlStartPos, controlEndPos);
         }
 
-        protected void OnDuringHandling(Vector3 lineStartPos, Vector3 lineEndPos, float lineLength)
+        public (Vector3, Vector3) GetControlPoints(Vector3 lineStartPos, Vector3 lineEndPos, out float length)
         {
-            if (lineLength > MAX_FORMABLE_THRESHOLD)
+            (Vector3 controlStartPos, Vector3 controlEndPos) = GetControlPoints(lineStartPos, lineEndPos);
+            length = Vector3.Distance(controlStartPos, controlEndPos);
+
+            return (controlStartPos, controlEndPos);
+        }
+
+        protected void OnDuringHandling(Vector3 lineStartPos, Vector3 lineEndPos)
+        {
+            GetControlPoints(lineStartPos, lineEndPos, out float controlLength);
+
+            if (controlLength > MAX_FORMABLE_THRESHOLD)
             {
-                float _unitsPerRowUnclamped = lineLength / UnitSpacing;
-                int _unitsPerRow = (int)(lineLength / UnitSpacing);
+                float _unitsPerRowUnclamped = controlLength / UnitSpacing;
+                int _unitsPerRow = (int)(controlLength / UnitSpacing);
                 this._unitsPerRowRemained = _unitsPerRowUnclamped - _unitsPerRow;
 
                 _unitsPerRow = Mathf.Clamp(_unitsPerRow, 1, int.MaxValue);
@@ -41,13 +60,40 @@ namespace _TW_Framework
 
         protected void OnEndHandling(Vector3 lineStartPos, Vector3 lineEndPos)
         {
+            (Vector3 controlStartPos, Vector3 controlEndPos) = GetControlPoints(lineStartPos, lineEndPos);
+
             TargetController = null;
-            ApplyMouseFormationing(lineStartPos, lineEndPos);
+            ApplyMouseFormationing(controlStartPos, controlEndPos);
         }
 
         protected void OnClickEnemyHandler(FormationController controller)
         {
             TargetController = controller;
+        }
+
+        public void OnSelected()
+        {
+            mouseEventHandler.OnDuringHandling += OnDuringHandling;
+            mouseEventHandler.OnEndHandling += OnEndHandling;
+            mouseEventHandler.OnClickEnemyHandler += OnClickEnemyHandler;
+
+            OnSelectedAction?.Invoke();
+        }
+
+        public void OnSelectionStateChanged(int selectedCount, int selectedIndex)
+        {
+            selectedNormalRange = new Vector2((float)selectedIndex / selectedCount, (float)(selectedIndex + 1f) / selectedCount);
+        }
+
+        public virtual void OnDeselected()
+        {
+            selectedNormalRange = new Vector2(-1f, -1f);
+
+            mouseEventHandler.OnClickEnemyHandler -= OnClickEnemyHandler;
+            mouseEventHandler.OnEndHandling -= OnEndHandling;
+            mouseEventHandler.OnDuringHandling -= OnDuringHandling;
+
+            OnDeselectedAction?.Invoke();
         }
     }
 }

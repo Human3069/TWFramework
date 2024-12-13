@@ -11,7 +11,7 @@ namespace _TW_Framework
         [SerializeField]
         protected MouseEventHandler _mouseEventHandler;
         [SerializeField]
-        protected FormationController _controller;
+        protected PlayerFormationController _controller;
 
         [Space(10)]
         [SerializeField]
@@ -24,12 +24,12 @@ namespace _TW_Framework
 
         protected void Awake()
         {
-            _mouseEventHandler.OnStartHandling += OnStartHandling;
-            _mouseEventHandler.OnDuringHandling += OnDuringHandling;
-            _mouseEventHandler.OnEndHandling += OnEndHandling;
             _controller.OnControllerInitialized += OnControllerInitialized;
             _controller.OnUnitCountChanged += OnUnitCountChanged;
-   
+
+            _controller.OnSelectedAction += OnSelected;
+            _controller.OnDeselectedAction += OnDeselected;
+
             for (int i = 0; i < _controller.UnitHandlerList.Count; i++)
             {
                 GameObject _obj = Instantiate(silhouettePrefab);
@@ -42,11 +42,11 @@ namespace _TW_Framework
 
         protected void OnDestroy()
         {
+            _controller.OnDeselectedAction -= OnDeselected;
+            _controller.OnSelectedAction -= OnSelected;
+
             _controller.OnUnitCountChanged -= OnUnitCountChanged;
             _controller.OnControllerInitialized -= OnControllerInitialized;
-            _mouseEventHandler.OnEndHandling -= OnEndHandling;
-            _mouseEventHandler.OnDuringHandling -= OnDuringHandling;
-            _mouseEventHandler.OnStartHandling -= OnStartHandling;
         }
 
         protected void Update()
@@ -56,6 +56,20 @@ namespace _TW_Framework
                 isEventOn = !isEventOn;
                 SetSilhouettesActive(isEventOn);
             }
+        }
+
+        protected void OnSelected()
+        {
+            _mouseEventHandler.OnStartHandling += OnStartHandling;
+            _mouseEventHandler.OnDuringHandling += OnDuringHandling;
+            _mouseEventHandler.OnEndHandling += OnEndHandling;
+        }
+
+        protected void OnDeselected()
+        {
+            _mouseEventHandler.OnEndHandling -= OnEndHandling;
+            _mouseEventHandler.OnDuringHandling -= OnDuringHandling;
+            _mouseEventHandler.OnStartHandling -= OnStartHandling;
         }
 
         protected void OnControllerInitialized(Vector3 startPos, Vector3 endPos)
@@ -104,6 +118,8 @@ namespace _TW_Framework
 
         protected void OnStartHandling(Vector3 lineStartPos, Vector3 lineEndPos)
         {
+            (Vector3 controlStartPos, Vector3 controlEndPos) = _controller.GetControlPoints(lineStartPos, lineEndPos);
+
             SetSilhouettesActive(true);
 
             List<Vector3> currentPosList = new List<Vector3>();
@@ -115,7 +131,7 @@ namespace _TW_Framework
                 currentPosList.Add(silhouetteObjList[i].transform.position);
             }
 
-            (posList, facingAngle) = FormationPositionerEx.GetPositionListAndAngle(currentPosList, _controller.CurrentFormation, lineStartPos);
+            (posList, facingAngle) = FormationPositionerEx.GetPositionListAndAngle(currentPosList, _controller.CurrentFormation, controlStartPos);
 
             for (int i = 0; i < silhouetteObjList.Count; i++)
             {
@@ -124,16 +140,18 @@ namespace _TW_Framework
             }
         }
 
-        protected void OnDuringHandling(Vector3 lineStartPos, Vector3 lineEndPos, float lineLength)
+        protected void OnDuringHandling(Vector3 lineStartPos, Vector3 lineEndPos)
         {
-            Vector3 leftDirection = Vector3.Cross(lineEndPos - lineStartPos, Vector3.up);
-            float _length = (lineStartPos - lineEndPos).magnitude;
+            (Vector3 controlStartPos, Vector3 controlEndPos) = _controller.GetControlPoints(lineStartPos, lineEndPos);
+
+            Vector3 leftDirection = Vector3.Cross(controlEndPos - controlStartPos, Vector3.up);
+            float _length = (controlStartPos - controlEndPos).magnitude;
             _length = Mathf.Clamp(_length, 0.001f, float.MaxValue);
 
             if (_length > FormationController.MAX_FORMABLE_THRESHOLD)
             {
                 float normalizedRemained = _controller.UnitsPerRowRemained / _length;
-                Vector3 middlePos = Vector3.LerpUnclamped(lineStartPos, lineEndPos, 0.5f - normalizedRemained);
+                Vector3 middlePos = Vector3.LerpUnclamped(controlStartPos, controlEndPos, 0.5f - normalizedRemained);
 
                 float facingAngle = Mathf.Atan2(leftDirection.x, leftDirection.z) * Mathf.Rad2Deg;
                 List<Vector3> posList = FormationPositionerEx.GetAlignedPositionList(silhouetteObjList.Count, _controller.CurrentFormation, middlePos, facingAngle);

@@ -1,5 +1,6 @@
 using System.Collections.Generic;
 using UnityEngine;
+using UnityEngine.UI;
 
 namespace _TW_Framework
 {
@@ -42,7 +43,7 @@ namespace _TW_Framework
                 tempList[_siblingIndex] = element;
             }
 
-            for (int i = 0; i <  tempList.Count; i++)
+            for (int i = 0; i < tempList.Count; i++)
             {
                 oldList[i] = tempList[i];
             }

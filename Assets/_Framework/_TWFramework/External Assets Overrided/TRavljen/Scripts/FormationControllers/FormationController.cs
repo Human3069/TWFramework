@@ -83,7 +83,7 @@ namespace _TW_Framework
                 _unitHandlerList = value;
             }
         }
-        
+
         [Space(10)]
         [ReadOnly]
         [SerializeField]
@@ -391,34 +391,6 @@ namespace _TW_Framework
             }
         }
 
-        public void ChangeUnitFormation(Type formationType)
-        {
-            if (formationType == typeof(RectangleFormation))
-            {
-                CurrentFormation = new RectangleFormation(UnitsPerRow, UnitSpacing, true, IsPivotInMiddle);
-            }
-            else if (formationType == typeof(CircleFormation))
-            {
-                CurrentFormation = new CircleFormation(UnitSpacing);
-            }
-            else if (formationType == typeof(LineFormation))
-            {
-                CurrentFormation = new LineFormation(UnitSpacing);
-            }
-            else if (formationType == typeof(TriangleFormation))
-            {
-                CurrentFormation = new TriangleFormation(UnitSpacing);
-            }
-            else if (formationType == typeof(ConeFormation))
-            {
-                CurrentFormation = new ConeFormation(UnitSpacing, IsPivotInMiddle);
-            }
-            else
-            {
-                Debug.Assert(false);
-            }
-        }
-
         protected void ApplyMouseFormationing(Vector3 startPos, Vector3 endPos)
         {
             this.lineStartPos = startPos;
@@ -487,27 +459,55 @@ namespace _TW_Framework
             YieldPositionRoutine().Forget();
         }
 
+        public void ChangeUnitFormation(IFormation formationType)
+        {
+            if (formationType is RectangleFormation rectangleFormation)
+            {
+                CurrentFormation = rectangleFormation;
+            }
+            else if (formationType is CircleFormation circleFormation)
+            {
+                CurrentFormation = circleFormation;
+            }
+            else if (formationType is LineFormation lineFormation)
+            {
+                CurrentFormation = lineFormation;
+            }
+            else if (formationType is TriangleFormation triangleFormation)
+            {
+                CurrentFormation = triangleFormation;
+            }
+            else if (formationType is ConeFormation coneFormation)
+            {
+                CurrentFormation = coneFormation;
+            }
+            else
+            {
+                Debug.Assert(false);
+            }
+        }
+
         protected void ReinstantiateFormation()
         {
             if (_currentFormation is RectangleFormation)
             {
-                _currentFormation = new RectangleFormation(UnitsPerRow, UnitSpacing, true, IsPivotInMiddle);
+                _currentFormation = new RectangleFormation(this);
             }
             else if (_currentFormation is LineFormation)
             {
-                _currentFormation = new LineFormation(UnitSpacing);
+                _currentFormation = new LineFormation(this);
             }
             else if (_currentFormation is CircleFormation)
             {
-                _currentFormation = new CircleFormation(UnitSpacing);
+                _currentFormation = new CircleFormation(this);
             }
             else if (_currentFormation is TriangleFormation)
             {
-                _currentFormation = new TriangleFormation(UnitSpacing, pivotInMiddle: IsPivotInMiddle);
+                _currentFormation = new TriangleFormation(this);
             }
             else if (_currentFormation is ConeFormation)
             {
-                _currentFormation = new ConeFormation(UnitSpacing, IsPivotInMiddle);
+                _currentFormation = new ConeFormation(this);
             }
         }
 
