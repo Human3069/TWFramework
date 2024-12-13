@@ -2348,6 +2348,10 @@ MonoBehaviour:
       Value:
         prefab: {fileID: 3899280634963438216, guid: 0a720733a5d780648b05e46d6592f31c, type: 3}
         initCount: 100
+    - Key: 1
+      Value:
+        prefab: {fileID: 186004, guid: dae81c6ef7d080c4f858e5ad20e7bf6e, type: 3}
+        initCount: 100
 --- !u!1001 &226031940
 PrefabInstance:
   m_ObjectHideFlags: 0
@@ -3364,7 +3368,7 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: 
   m_Navigation:
-    m_Mode: 3
+    m_Mode: 0
     m_WrapAround: 0
     m_SelectOnUp: {fileID: 0}
     m_SelectOnDown: {fileID: 0}
@@ -5423,7 +5427,7 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: 
   m_Navigation:
-    m_Mode: 3
+    m_Mode: 0
     m_WrapAround: 0
     m_SelectOnUp: {fileID: 0}
     m_SelectOnDown: {fileID: 0}
@@ -13022,7 +13026,7 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: 
   m_Navigation:
-    m_Mode: 3
+    m_Mode: 0
     m_WrapAround: 0
     m_SelectOnUp: {fileID: 0}
     m_SelectOnDown: {fileID: 0}
@@ -14172,6 +14176,7 @@ MonoBehaviour:
   lineStartPos: {x: 0, y: 0, z: 0}
   lineEndPos: {x: 0, y: 0, z: 0}
   lineLength: 0
+  selectedControllerList: []
 --- !u!120 &1644777737
 LineRenderer:
   serializedVersion: 2
@@ -15810,6 +15815,7 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: cba5f462e5c3ab246a70db95f5e5e1c5, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
+  mouseEventHandler: {fileID: 1644777736}
   allControllerList:
   - {fileID: 1579609655}
   - {fileID: 924390956}

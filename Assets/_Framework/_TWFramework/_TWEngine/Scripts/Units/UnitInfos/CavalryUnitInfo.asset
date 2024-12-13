@@ -1,0 +1,26 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 687fdb09b8105c44886dfac7ffa2aff7, type: 3}
+  m_Name: CavalryUnitInfo
+  m_EditorClassIdentifier: 
+  _UnitType: 1
+  MaxHealth: 100
+  MeleeDamage: 10
+  MeleeSpeed: 1
+  _WeaponInfo: {fileID: 11400000, guid: 81cc3f4d924729d40929881a0c400009, type: 2}
+  RangedSpeed: 15
+  RangedAccuracy: 10
+  _FormationType: 13
+  UnitSpacing: 2
+  NoiseAmount: 0
+  UnitPrefab: {fileID: 8091776970705940152, guid: 63b4bb0ca6f054c4e87b2d0648759458, type: 3}
+  SilhouettePrefab: {fileID: 8091776970705940152, guid: c18732876bf676747b9bfe9a29355c77, type: 3}
