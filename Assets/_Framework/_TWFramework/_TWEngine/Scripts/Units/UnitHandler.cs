@@ -20,9 +20,10 @@ namespace _TW_Framework
     {
         protected Animation _animation;
         protected NavMeshAgent _agent;
+        protected AudioSource _audioSource;
 
         [HideInInspector]
-        public FormationController Controller;
+        public BaseFormationController Controller;
         [HideInInspector]
         public TeamType _TeamType;
 
@@ -52,6 +53,7 @@ namespace _TW_Framework
         public Action<UnitState> OnStateChanged;
 
         [Header("=== IDamageable ===")]
+        [ReadOnly]
         [SerializeField]
         protected float maxHealth = 100f;
         [ReadOnly]
@@ -75,6 +77,8 @@ namespace _TW_Framework
         [Space(10)]
         [SerializeField]
         protected ParticleSystem muzzleFlash;
+        [SerializeField]
+        protected AudioClip[] fireClips;
 
         protected float facingAngle = 0f;
         protected bool faceOnDestination = false;
@@ -133,8 +137,10 @@ namespace _TW_Framework
         public bool IsDead = false;
 
         [Space(10)]
+        [ReadOnly]
         [SerializeField]
         protected MeleeAttack meleeAttack;
+        [ReadOnly]
         [SerializeField]
         protected RangedAttack rangedAttack;
 
@@ -170,9 +176,7 @@ namespace _TW_Framework
         {
             _animation = this.GetComponent<Animation>();
             _agent = this.GetComponent<NavMeshAgent>();
-
-            meleeAttack.Initialize(this);
-            rangedAttack.Initialize(this);
+            _audioSource = this.GetComponent<AudioSource>();
         }
 
         protected void OnDestroy()
@@ -183,13 +187,19 @@ namespace _TW_Framework
             rangedAttack = null;
         }
 
-        public void Initialize(FormationController controller, TeamType teamType)
+        public void Initialize(BaseFormationController controller, TeamType teamType, UnitInfo unitInfo)
         {
             IsDead = false;
 
             this.Controller = controller;
             this._TeamType = teamType;
 
+            meleeAttack.Initialize(this, unitInfo.MeleeDamage, unitInfo.MeleeSpeed, unitInfo.MeleeRange);
+            meleeAttack.SeekToMeleeAttackAsync().Forget();
+
+            rangedAttack.Initialize(this, unitInfo._WeaponInfo);
+
+            maxHealth = unitInfo.MaxHealth;
             CurrentHealth = maxHealth;
         }
 
@@ -259,55 +269,61 @@ namespace _TW_Framework
             public UnitHandler MeleeAttackingUnit;
 
             [Space(10)]
+            [ReadOnly]
             [SerializeField]
             protected float meleeAttackDamage = 10f;
+            [ReadOnly]
             [SerializeField]
             protected float meleeAttackSpeed = 1f;
+            [ReadOnly]
+            [SerializeField]
+            protected float meleeAttackRange = 2f;
 
-            public virtual void Initialize(UnitHandler unitHandler)
+            public virtual void Initialize(UnitHandler unitHandler, float attackDamage, float attackSpeed, float attackRange)
             {
                 _unitHandler = unitHandler;
-                _unitHandler.OnStateChanged += OnStateChanged;
-            }
 
-            protected void OnStateChanged(UnitState unitState)
-            {
-                if (unitState == UnitState.Idle)
-                {
-                    SeekToMeleeAttackAsync().Forget();
-                }
-                else if (unitState == UnitState.Moving)
-                {
-                    MeleeAttackingUnit = null;
-                }
+                meleeAttackDamage = attackDamage;
+                meleeAttackSpeed = attackSpeed;
+                meleeAttackRange = attackRange;
             }
 
             public async UniTask SeekToMeleeAttackAsync()
             {
-                while (MeleeAttackingUnit == null && _unitHandler.IsDead == false && _unitHandler._UnitState == UnitState.Idle)
+                while (_unitHandler.IsDead == false)
                 {
-                    Collider[] overlappedColliders = Physics.OverlapSphere(_unitHandler.transform.position, 2f);
-                    foreach (Collider overlappedCollider in overlappedColliders)
+                    if (MeleeAttackingUnit == null)
                     {
-                        if (overlappedCollider.TryGetComponent<UnitHandler>(out UnitHandler unitHandler) == true)
+                        Collider[] overlappedColliders = Physics.OverlapSphere(_unitHandler.transform.position, meleeAttackRange);
+                        foreach (Collider overlappedCollider in overlappedColliders)
                         {
-                            if (unitHandler._TeamType != _unitHandler._TeamType)
+                            if (overlappedCollider.TryGetComponent<UnitHandler>(out UnitHandler unitHandler) == true)
                             {
-                                MeleeAttackingUnit = unitHandler;
-                                MeleeAttackAsync().Forget();
-
-                                return;
+                                if (unitHandler._TeamType != _unitHandler._TeamType &&
+                                    (unitHandler.transform.position - _unitHandler.transform.position).magnitude <= meleeAttackRange)
+                                {
+                                    MeleeAttackingUnit = unitHandler;
+                                    MeleeAttackAsync().Forget();
+                                }
                             }
                         }
                     }
+                    else if ((MeleeAttackingUnit.transform.position - _unitHandler.transform.position).magnitude <= meleeAttackRange)
+                    {
+                        MeleeAttackAsync().Forget();
+                    }
+                    else
+                    {
+                        MeleeAttackingUnit = null;
+                    }
 
-                    await UniTaskEx.WaitForSeconds(_unitHandler, 0, UnityEngine.Random.Range(0.4f, 0.6f));
+                    await UniTaskEx.WaitForSeconds(_unitHandler, 1, UnityEngine.Random.Range(0.4f, 0.6f));
                 }
             }
 
             protected async UniTask MeleeAttackAsync()
             {
-                while (MeleeAttackingUnit != null && (_unitHandler._UnitState == UnitState.Idle || _unitHandler._UnitState == UnitState.MeleeAttacking) && _unitHandler.IsDead == false)
+                while (MeleeAttackingUnit != null && _unitHandler.IsDead == false)
                 {
                     _unitHandler._UnitState = UnitState.MeleeAttacking;
                     _unitHandler.PlayAnimation("MeleeAttack");
@@ -315,7 +331,7 @@ namespace _TW_Framework
                     IDamageable damageable = MeleeAttackingUnit;
                     damageable.TakeDamage(meleeAttackDamage);
 
-                    await UniTaskEx.WaitForSeconds(_unitHandler, 0, UnityEngine.Random.Range(meleeAttackSpeed - 0.5f, meleeAttackSpeed + 0.5f));
+                    await UniTaskEx.WaitForSeconds(_unitHandler, 1, UnityEngine.Random.Range(meleeAttackSpeed - 0.5f, meleeAttackSpeed + 0.5f));
                 }
 
                 if (_unitHandler.IsStopped == true)
@@ -338,8 +354,10 @@ namespace _TW_Framework
             public UnitHandler RangedAttackingUnit;
 
             [Space(10)]
+            [ReadOnly]
             [SerializeField]
             protected float rangedAttackDamage = 10f;
+            [ReadOnly]
             [SerializeField]
             protected float rangedAttackSpeed = 1f;
 
@@ -349,28 +367,38 @@ namespace _TW_Framework
             protected float reloadingRemained;
 
             [Space(10)]
+            [ReadOnly]
             [SerializeField]
             protected float rangedAttackRange = 10f;
+            [ReadOnly]
             [SerializeField]
             protected float rangedAttackAngle = 45f;
 
             [Space(10)]
+            [ReadOnly]
             [SerializeField]
             protected float accuracy = 100f; // ranged 0 ~ 100
 
             [Space(10)]
+            [ReadOnly]
             [SerializeField]
             protected int maxAmmoCount = 5;
             [ReadOnly]
             [SerializeField]
             protected int currentAmmoCount;
 
-            public virtual void Initialize(UnitHandler unitHandler)
+            public virtual void Initialize(UnitHandler unitHandler, WeaponInfo weaponInfo)
             {
                 _unitHandler = unitHandler;
                 _unitHandler.OnStateChanged += OnStateChanged;
 
+                maxAmmoCount = weaponInfo.MaxAmmo;
                 currentAmmoCount = maxAmmoCount;
+
+                rangedAttackDamage = weaponInfo.Damage;
+                rangedAttackSpeed = weaponInfo.ReloadTime;
+                rangedAttackRange = weaponInfo.Range;
+                accuracy = weaponInfo.Accuracy;
             }
 
             protected void OnStateChanged(UnitState unitState)
@@ -431,22 +459,23 @@ namespace _TW_Framework
 
                     _unitHandler._UnitState = UnitState.RangedAttacking;
                     _unitHandler.PlayAnimation("RangedAttack");
-                    if (_unitHandler.muzzleFlash != null)
+
+                    int randomIndex = UnityEngine.Random.Range(0, _unitHandler.fireClips.Length);
+                    _unitHandler._audioSource.PlayOneShot(_unitHandler.fireClips[randomIndex]);
+
+                    _unitHandler.muzzleFlash.Play();
+
+                    PoolerType.MusketBullet.EnablePool<BulletHandler>(BeforePool);
+                    void BeforePool(BulletHandler bullet)
                     {
-                        _unitHandler.muzzleFlash.Play();
+                        bullet.Initialize(_unitHandler._TeamType, rangedAttackDamage);
 
-                        PoolerType.MusketBullet.EnablePool<BulletHandler>(BeforePool);
-                        void BeforePool(BulletHandler bullet)
-                        {
-                            bullet.Initialize(_unitHandler._TeamType, rangedAttackDamage);
+                        Vector3 maxRandomed = new Vector3(UnityEngine.Random.Range(-5f, 5f), UnityEngine.Random.Range(-5f, 5f), 0f);
+                        Vector3 accuracyApplied = Vector3.Lerp(maxRandomed, Vector3.zero, accuracy / 100f);
 
-                            Vector3 maxRandomed = new Vector3(UnityEngine.Random.Range(-5f, 5f), UnityEngine.Random.Range(-5f, 5f), 0f);
-                            Vector3 accuracyApplied = Vector3.Lerp(maxRandomed, Vector3.zero, accuracy / 100f);
-
-                            bullet.transform.position = _unitHandler.muzzleFlash.transform.position;
-                            Vector3 direction = (RangedAttackingUnit.MiddlePos - _unitHandler.MiddlePos).normalized;
-                            bullet.transform.eulerAngles = Quaternion.LookRotation(direction).eulerAngles + accuracyApplied;
-                        }
+                        bullet.transform.position = _unitHandler.muzzleFlash.transform.position;
+                        Vector3 direction = (RangedAttackingUnit.MiddlePos - _unitHandler.MiddlePos).normalized;
+                        bullet.transform.eulerAngles = Quaternion.LookRotation(direction).eulerAngles + accuracyApplied;
                     }
 
                     currentAmmoCount--;

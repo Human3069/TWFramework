@@ -13,14 +13,14 @@ MonoBehaviour:
   m_Name: CavalryUnitInfo
   m_EditorClassIdentifier: 
   _UnitType: 1
-  MaxHealth: 100
-  MeleeDamage: 10
+  MaxHealth: 150
+  MeleeDamage: 30
   MeleeSpeed: 1
-  _WeaponInfo: {fileID: 11400000, guid: 81cc3f4d924729d40929881a0c400009, type: 2}
-  RangedSpeed: 15
-  RangedAccuracy: 10
+  MeleeRange: 2
+  _WeaponInfo: {fileID: 11400000, guid: c85ac72c415017849a328a75a67761e9, type: 2}
   _FormationType: 13
-  UnitSpacing: 2
+  UnitCount: 40
+  UnitSpacing: 3
   NoiseAmount: 0
-  UnitPrefab: {fileID: 8091776970705940152, guid: 63b4bb0ca6f054c4e87b2d0648759458, type: 3}
-  SilhouettePrefab: {fileID: 8091776970705940152, guid: c18732876bf676747b9bfe9a29355c77, type: 3}
+  UnitPrefab: {fileID: 8091776970705940152, guid: f07865beab5d94143a168c44b3affd4b, type: 3}
+  SilhouettePrefab: {fileID: 8091776970705940152, guid: 5f23ab441824e9d4a86abcd0a39928cd, type: 3}

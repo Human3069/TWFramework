@@ -9,7 +9,7 @@ namespace _TW_Framework
         private float spacing;
         private bool pivotInMiddle;
 
-        public ConeFormation(FormationController controller) : this(controller.UnitSpacing, controller.IsPivotInMiddle) { }
+        public ConeFormation(BaseFormationController controller) : this(controller.UnitSpacing, controller.IsPivotInMiddle) { }
 
         public ConeFormation(float spacing, bool pivotInMiddle = true)
         {

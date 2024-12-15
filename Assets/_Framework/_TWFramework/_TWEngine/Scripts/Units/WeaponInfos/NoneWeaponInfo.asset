@@ -10,10 +10,10 @@ MonoBehaviour:
   m_Enabled: 1
   m_EditorHideFlags: 0
   m_Script: {fileID: 11500000, guid: dbdce8ac5ef109449b563cb3a5e8c65f, type: 3}
-  m_Name: FlintlockRifleWeaponInfo
+  m_Name: NoneWeaponInfo
   m_EditorClassIdentifier: 
-  Accuracy: 60
-  Damage: 50
-  Range: 150
-  ReloadTime: 20
-  MaxAmmo: 30
+  Accuracy: 0
+  Damage: 0
+  Range: 0
+  ReloadTime: 0
+  MaxAmmo: 0

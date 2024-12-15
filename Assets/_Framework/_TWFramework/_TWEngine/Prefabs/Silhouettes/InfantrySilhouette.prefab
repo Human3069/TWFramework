@@ -93,7 +93,7 @@ GameObject:
   m_Component:
   - component: {fileID: 8091776970705940153}
   m_Layer: 0
-  m_Name: UnitSilhouette
+  m_Name: InfantrySilhouette
   m_TagString: Untagged
   m_Icon: {fileID: 0}
   m_NavMeshLayer: 0

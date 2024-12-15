@@ -1,5 +1,4 @@
 using System.Collections.Generic;
-using TRavljen.UnitFormation.Formations;
 using TRavljen.UnitFormation;
 using UnityEngine;
 using System;
@@ -14,20 +13,37 @@ namespace _TW_Framework
         Neutral
     }
 
-    public class FormationController : MonoBehaviour
+    public abstract class BaseFormationController : MonoBehaviour
     {
+        private const string _LOG_FORMAT = "<color=white><b>[BaseFormationController]</b></color> {0}";
+
         public const float MAX_FORMABLE_THRESHOLD = 0.8f;
         private const float _MAX_FORMABLE_ANGLE = 120;
 
-        private const string _LOG_FORMAT = "<color=white><b>[FormationController]</b></color> {0}";
+        protected TeamType _teamType
+        {
+            get
+            {
+                if (this is PlayerFormationController)
+                {
+                    return TeamType.Player;
+                }
+                else if (this is EnemyFormationController)
+                {
+                    return TeamType.Enemy;
+                }
+                else
+                {
+                    throw new NotImplementedException();
+                }
+            }
+        }
 
         [Header("=== FormationController ===")]
-        [SerializeField]
-        protected TeamType teamType;
         [ReadOnly]
         [SerializeField]
-        protected FormationController _targetController;
-        protected FormationController TargetController
+        protected BaseFormationController _targetController;
+        protected BaseFormationController TargetController
         {
             get
             {
@@ -60,15 +76,7 @@ namespace _TW_Framework
             }
         }
 
-        [Space(10)]
-        [SerializeField]
-        protected Transform initialLineStartT;
-        [SerializeField]
-        protected Transform initialLineEndT;
-
-        [Space(10)]
-        [SerializeField]
-        private GameObject unitPrefab = null;
+        protected GameObject _unitPrefab = null;
 
         [SerializeField]
         protected List<UnitHandler> _unitHandlerList = new List<UnitHandler>();
@@ -104,9 +112,10 @@ namespace _TW_Framework
                     {
                         for (int i = UnitHandlerList.Count; i < value; i++)
                         {
-                            GameObject _obj = Instantiate(unitPrefab, transform.position, Quaternion.identity);
+                            GameObject _obj = Instantiate(_unitPrefab, transform.position, Quaternion.identity);
                             UnitHandler _unit = _obj.GetComponent<UnitHandler>();
-                            _unit.Initialize(this, teamType);
+
+                            _unit.Initialize(this, _teamType, _unitInfo);
 
                             _obj.transform.parent = this.transform;
 
@@ -141,6 +150,24 @@ namespace _TW_Framework
 
             UnitCount = UnitHandlerList.Count;
             ApplyCurrentUnitFormation();
+
+            if (UnitCount == 0)
+            {
+                if (this is PlayerFormationController)
+                {
+                    TWManager.Instance.Player.OnAllUnitsDead(this);
+                }
+                else if (this is EnemyFormationController)
+                {
+                    TWManager.Instance.Enemy.OnAllUnitsDead(this);
+                }
+                else
+                {
+                    throw new NotImplementedException("");
+                }
+
+                Destroy(this.gameObject);
+            }
         }
 
         public delegate void UnitCountChanged(int unitCount);
@@ -272,49 +299,57 @@ namespace _TW_Framework
             }
         }
 
+        [ReadOnly]
+        [SerializeField]
         protected Vector3 lineStartPos;
+        [ReadOnly]
+        [SerializeField]
         protected Vector3 lineEndPos;
 
         protected float currentFacingAngle;
+        public int SelectedIndex = -1;
 
-        public delegate void Initialized(Vector3 startPos, Vector3 endPos);
-        public event Initialized OnControllerInitialized;
+        protected UnitInfo _unitInfo;
 
-        protected virtual void Start()
+        public void Initialize(UnitInfo unitInfo, Vector3 startPoint, float unitDistance, int selectedIndex, float facingAngle)
         {
-            foreach (UnitHandler unit in UnitHandlerList)
+            _unitInfo = unitInfo;
+            _unitPrefab = _unitInfo.UnitPrefab;
+
+            for (int i = 0; i < _unitInfo.UnitCount; i++)
             {
-                unit.Initialize(this, teamType);
+                GameObject unitObj = Instantiate(_unitInfo.UnitPrefab);
+                unitObj.transform.SetParent(this.transform);
+
+                UnitHandler unit = unitObj.GetComponent<UnitHandler>();
+                unit.Initialize(this, _teamType, _unitInfo);
+
+                UnitHandlerList.Add(unit);
             }
 
-            lineStartPos = initialLineStartT.position;
-            lineEndPos = initialLineEndT.position;
-            float lineLength = (lineStartPos - lineEndPos).magnitude;
+            lineStartPos = startPoint + (Vector3.left * unitDistance / 2f);
+            lineEndPos = startPoint + (Vector3.right * unitDistance / 2f);
 
-            _unitCount = UnitHandlerList.Count;
-            _unitSpacing = 2f;
-            _noiseAmount = 0f;
+            this._unitCount = _unitInfo.UnitCount;
+            this._unitSpacing = _unitInfo.UnitSpacing;
+            this._noiseAmount = _unitInfo.NoiseAmount;
 
-            float _unitsPerRowUnclamped = lineLength / UnitSpacing;
-            int _unitsPerRow = (int)(lineLength / UnitSpacing);
+            float _unitsPerRowUnclamped = unitDistance / UnitSpacing;
+            int _unitsPerRow = (int)(unitDistance / UnitSpacing);
             this._unitsPerRowRemained = _unitsPerRowUnclamped - _unitsPerRow;
 
             _unitsPerRow = Mathf.Clamp(_unitsPerRow, 1, int.MaxValue);
             this.UnitsPerRow = _unitsPerRow;
 
-            CurrentFormation = new RectangleFormation((int)UnitsPerRow, UnitSpacing, true, IsPivotInMiddle);
-
-            PostStart().Forget();
-        }
-
-        protected async UniTaskVoid PostStart()
-        {
-            await UniTask.Yield();
-
-            if (OnControllerInitialized != null)
+            _currentFormation = new RectangleFormation((int)UnitsPerRow, UnitSpacing, true, IsPivotInMiddle);
+            List<Vector3> posList = FormationPositionerEx.GetAlignedPositionList(UnitHandlerList.Count, CurrentFormation, startPoint, facingAngle);
+            for (int i = 0; i < UnitHandlerList.Count; i++)
             {
-                OnControllerInitialized(lineStartPos, lineEndPos);
+                UnitHandlerList[i].transform.position = posList[i] + UnitFormationHelper.GetNoise(NoiseAmount);
+                UnitHandlerList[i].transform.eulerAngles = new Vector3(0f, facingAngle, 0f);
             }
+
+            SelectedIndex = selectedIndex;
         }
 
         protected async UniTask YieldPositionRoutine()
@@ -569,11 +604,6 @@ namespace _TW_Framework
                     Gizmos.color = Color.blue;
                     Gizmos.DrawLine(pair.Key, pair.Value);
                 }
-            }
-            else
-            {
-                Gizmos.color = Color.red;
-                Gizmos.DrawLine(initialLineStartT.position, initialLineEndT.position);
             }
         }
 #endif

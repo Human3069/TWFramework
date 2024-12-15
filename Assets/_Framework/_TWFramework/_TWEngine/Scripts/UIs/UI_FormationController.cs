@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Reflection;
 using UnityEngine;
+using UnityEngine.EventSystems;
 using UnityEngine.UI;
 
 namespace _TW_Framework
@@ -11,6 +12,7 @@ namespace _TW_Framework
     {
         private const string LOG_FORMAT = "<color=white><b>[UI_FormationController]</b></color> {0}";
 
+        [Header("Cheat Panel")]
         [SerializeField]
         private Text unitCountText;
         [SerializeField]
@@ -18,28 +20,44 @@ namespace _TW_Framework
         [SerializeField]
         private Text unitNoiseText;
 
+        [Header("Bottombar Panel")]
+        [SerializeField]
+        protected GameObject buttonPrefab;
+        [SerializeField]
+        protected Transform cardParent;
+
         [Space(10)]
         [SerializeField]
-        protected Button[] cardButtons;
+        protected List<Button> cardButtonList;
 
         protected int pinnedIndex = -1;
 
         protected void Awake()
         {
-            IngameManager.Instance.OnSelectStateChanged += OnSelectStateChanged;
+            TWManager.Instance.Player.OnSelectStateChanged += OnSelectStateChanged;
 
             unitCountText.text = "Unit Count: 13";
             unitSpacingText.text = "Unit Spacing : 2.00";
             unitNoiseText.text = "Unit Noise : 0.00";
+        }
 
-            cardButtons[0].onClick.AddListener(() => OnClickCardButton(0));
-            cardButtons[1].onClick.AddListener(() => OnClickCardButton(1));
-            cardButtons[2].onClick.AddListener(() => OnClickCardButton(2));
+        public void Initialize(UnitInfo[] unitInfos)
+        {
+            for (int i = 0; i < unitInfos.Length; i++)
+            {
+                int localIndex = i;
+
+                GameObject buttonObj = Instantiate(buttonPrefab, cardParent);
+                Button button = buttonObj.GetComponent<Button>();
+                button.onClick.AddListener(() => OnClickCardButton(localIndex));
+
+                cardButtonList.Add(button);
+            }
         }
 
         public void OnValueChangedUnitCountSlider(float _value)
         {
-            List<PlayerFormationController> selectedControllerList = IngameManager.Instance.GetSelectedControllerList();
+            List<PlayerFormationController> selectedControllerList = TWManager.Instance.Player.GetSelectedControllerList();
             selectedControllerList.ForEach(x => x.UnitCount = (int)_value);
 
             unitCountText.text = "Unit Count: " + _value;
@@ -47,7 +65,7 @@ namespace _TW_Framework
 
         public void OnValueChangedUnitSpacingSlider(float _value)
         {
-            List<PlayerFormationController> selectedControllerList = IngameManager.Instance.GetSelectedControllerList();
+            List<PlayerFormationController> selectedControllerList = TWManager.Instance.Player.GetSelectedControllerList();
             selectedControllerList.ForEach(x => x.UnitSpacing = _value);
 
             string _formatted = _value.ToString("0.00");
@@ -56,7 +74,7 @@ namespace _TW_Framework
 
         public void OnValueChangedUnitNoiseSlider(float _value)
         {
-            List<PlayerFormationController> selectedControllerList = IngameManager.Instance.GetSelectedControllerList();
+            List<PlayerFormationController> selectedControllerList = TWManager.Instance.Player.GetSelectedControllerList();
             selectedControllerList.ForEach(x => x.NoiseAmount = _value);
 
             unitNoiseText.text = "Unit Noise : " + _value.ToString("F2");
@@ -66,7 +84,7 @@ namespace _TW_Framework
         {
             Debug.LogFormat(LOG_FORMAT, "OnClickRectangleFormationButton()");
 
-            List<PlayerFormationController> selectedControllerList = IngameManager.Instance.GetSelectedControllerList();
+            List<PlayerFormationController> selectedControllerList = TWManager.Instance.Player.GetSelectedControllerList();
             selectedControllerList.ForEach(x => x.ChangeUnitFormation(new RectangleFormation(x)));
         }
 
@@ -74,7 +92,7 @@ namespace _TW_Framework
         {
             Debug.LogFormat(LOG_FORMAT, "OnClickCircleFormationButton()");
 
-            List<PlayerFormationController> selectedControllerList = IngameManager.Instance.GetSelectedControllerList();
+            List<PlayerFormationController> selectedControllerList = TWManager.Instance.Player.GetSelectedControllerList();
             selectedControllerList.ForEach(x => x.ChangeUnitFormation(new CircleFormation(x)));
         }
 
@@ -82,7 +100,7 @@ namespace _TW_Framework
         {
             Debug.LogFormat(LOG_FORMAT, "OnClickLineFormationButton()");
 
-            List<PlayerFormationController> selectedControllerList = IngameManager.Instance.GetSelectedControllerList();
+            List<PlayerFormationController> selectedControllerList = TWManager.Instance.Player.GetSelectedControllerList();
             selectedControllerList.ForEach(x => x.ChangeUnitFormation(new LineFormation(x)));
         }
 
@@ -90,7 +108,7 @@ namespace _TW_Framework
         {
             Debug.LogFormat(LOG_FORMAT, "OnClickTriangleFormationButton()");
 
-            List<PlayerFormationController> selectedControllerList = IngameManager.Instance.GetSelectedControllerList();
+            List<PlayerFormationController> selectedControllerList = TWManager.Instance.Player.GetSelectedControllerList();
             selectedControllerList.ForEach(x => x.ChangeUnitFormation(new TriangleFormation(x)));
         }
 
@@ -98,13 +116,13 @@ namespace _TW_Framework
         {
             Debug.LogFormat(LOG_FORMAT, "OnClickConeFormationButton()");
 
-            List<PlayerFormationController> selectedControllerList = IngameManager.Instance.GetSelectedControllerList();
+            List<PlayerFormationController> selectedControllerList = TWManager.Instance.Player.GetSelectedControllerList();
             selectedControllerList.ForEach(x => x.ChangeUnitFormation(new ConeFormation(x)));
         }
 
         public void OnValueChangedPivotToggle(bool isOn)
         {
-            List<PlayerFormationController> selectedControllerList = IngameManager.Instance.GetSelectedControllerList();
+            List<PlayerFormationController> selectedControllerList = TWManager.Instance.Player.GetSelectedControllerList();
             selectedControllerList.ForEach(x => x.IsPivotInMiddle = isOn);
         }
 
@@ -112,7 +130,7 @@ namespace _TW_Framework
         {
             foreach (PlayerFormationController controller in controllerList)
             {
-                cardButtons[controller.SelectedIndex].image.color = Color.green;
+                cardButtonList[controller.SelectedIndex].image.color = Color.green;
             }
         }
 
@@ -122,18 +140,18 @@ namespace _TW_Framework
             {
                 if (pair.Value == true)
                 {
-                    cardButtons[pair.Key].image.color = Color.green;
+                    cardButtonList[pair.Key].image.color = Color.green;
                 }
                 else
                 {
-                    cardButtons[pair.Key].image.color = Color.white;
+                    cardButtonList[pair.Key].image.color = Color.white;
                 }
             }
         }
 
         protected void OnClickCardButton(int targetIndex)
         {
-            List<PlayerFormationController> selectedControllerList = IngameManager.Instance.GetSelectedControllerList();
+            List<PlayerFormationController> selectedControllerList = TWManager.Instance.Player.GetSelectedControllerList();
 
             List<int> deselectedIndexList = new List<int>() { 0, 1, 2 };
             List<int> selectedIndexList = selectedControllerList.ConvertAll(x => x.SelectedIndex);
@@ -174,19 +192,19 @@ namespace _TW_Framework
             deselectedIndexList.RemoveAll(x => selectedIndexList.Contains(x) == true);
             foreach (int index in selectedIndexList)
             {
-                IngameManager.Instance.SelectController(index);
-                cardButtons[index].image.color = Color.green;
+                TWManager.Instance.Player.SelectController(index);
+                cardButtonList[index].image.color = Color.green;
             }
 
             foreach (int index in deselectedIndexList)
             {
-                IngameManager.Instance.DeselectController(index);
-                cardButtons[index].image.color = Color.white;
+                TWManager.Instance.Player.DeselectController(index);
+                cardButtonList[index].image.color = Color.white;
             }
 
             foreach (int index in selectedIndexList)
             {
-                IngameManager.Instance.SelectStateChanged(index);
+                TWManager.Instance.Player.SelectStateChanged(index);
             }
         }
     }

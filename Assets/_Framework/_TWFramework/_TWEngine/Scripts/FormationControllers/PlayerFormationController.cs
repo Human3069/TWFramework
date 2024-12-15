@@ -1,18 +1,13 @@
 using System;
+using System.Collections.Generic;
+using TRavljen.UnitFormation;
 using UnityEngine;
-using UnityEngine.UIElements;
 
 namespace _TW_Framework
 {
-    public class PlayerFormationController : FormationController
+    public class PlayerFormationController : BaseFormationController
     {
         [Header("=== PlayerFormationController ===")]
-        [SerializeField]
-        protected MouseEventHandler mouseEventHandler;
-       
-        [Space(10)]
-        [ReadOnly]
-        public int SelectedIndex = -1;
         [ReadOnly]
         [SerializeField]
         public Vector2 selectedNormalRange = new Vector2(-1f, -1f);
@@ -20,9 +15,52 @@ namespace _TW_Framework
         public Action OnSelectedAction;
         public Action OnDeselectedAction;
 
-        public void Initialize(int selectedIndex)
+        protected MouseEventHandler _mouseEventHandler;
+
+        public void Initialize(UnitInfo unitInfo, Vector3 startPoint, float unitDistance, int selectedIndex, float facingAngle, MouseEventHandler mouseEventHandler)
         {
+            _unitInfo = unitInfo;
+            for (int i = 0; i < unitInfo.UnitCount; i++)
+            {
+                GameObject unitObj = Instantiate(unitInfo.UnitPrefab);
+                unitObj.transform.SetParent(this.transform);
+
+                UnitHandler unit = unitObj.GetComponent<UnitHandler>();
+                unit.Initialize(this, _teamType, _unitInfo);
+
+                UnitHandlerList.Add(unit);
+            }
+
+            lineStartPos = startPoint + (Vector3.left * unitDistance / 2f);
+            lineEndPos = startPoint + (Vector3.right * unitDistance / 2f);
+
+            this._unitCount = unitInfo.UnitCount;
+            this._unitSpacing = unitInfo.UnitSpacing;
+            this._noiseAmount = unitInfo.NoiseAmount;
+
+            float _unitsPerRowUnclamped = unitDistance / UnitSpacing;
+            int _unitsPerRow = (int)(unitDistance / UnitSpacing);
+            this._unitsPerRowRemained = _unitsPerRowUnclamped - _unitsPerRow;
+
+            _unitsPerRow = Mathf.Clamp(_unitsPerRow, 1, int.MaxValue);
+            this.UnitsPerRow = _unitsPerRow;
+
+            _currentFormation = new RectangleFormation((int)UnitsPerRow, UnitSpacing, true, IsPivotInMiddle);
+            List<Vector3> posList = FormationPositionerEx.GetAlignedPositionList(UnitHandlerList.Count, CurrentFormation, startPoint, facingAngle);
+            for (int i = 0; i < UnitHandlerList.Count; i++)
+            {
+                UnitHandlerList[i].transform.position = posList[i] + UnitFormationHelper.GetNoise(NoiseAmount);
+                UnitHandlerList[i].transform.eulerAngles = new Vector3(0f, facingAngle, 0f);
+            }
+
             SelectedIndex = selectedIndex;
+            _mouseEventHandler = mouseEventHandler;
+
+            GameObject silhouetteControllerObj = new GameObject("SilhouetteController");
+            silhouetteControllerObj.transform.SetParent(this.transform);
+
+            SilhouetteController silhouetteController = silhouetteControllerObj.AddComponent<SilhouetteController>();
+            silhouetteController.Initialize(this, mouseEventHandler, unitInfo.SilhouettePrefab, posList, facingAngle);
         }
 
         public (Vector3, Vector3) GetControlPoints(Vector3 lineStartPos, Vector3 lineEndPos)
@@ -66,16 +104,16 @@ namespace _TW_Framework
             ApplyMouseFormationing(controlStartPos, controlEndPos);
         }
 
-        protected void OnClickEnemyHandler(FormationController controller)
+        protected void OnClickEnemyHandler(BaseFormationController controller)
         {
             TargetController = controller;
         }
 
         public void OnSelected()
         {
-            mouseEventHandler.OnDuringHandling += OnDuringHandling;
-            mouseEventHandler.OnEndHandling += OnEndHandling;
-            mouseEventHandler.OnClickEnemyHandler += OnClickEnemyHandler;
+            _mouseEventHandler.OnDuringHandling += OnDuringHandling;
+            _mouseEventHandler.OnEndHandling += OnEndHandling;
+            _mouseEventHandler.OnClickEnemyHandler += OnClickEnemyHandler;
 
             OnSelectedAction?.Invoke();
         }
@@ -89,9 +127,9 @@ namespace _TW_Framework
         {
             selectedNormalRange = new Vector2(-1f, -1f);
 
-            mouseEventHandler.OnClickEnemyHandler -= OnClickEnemyHandler;
-            mouseEventHandler.OnEndHandling -= OnEndHandling;
-            mouseEventHandler.OnDuringHandling -= OnDuringHandling;
+            _mouseEventHandler.OnClickEnemyHandler -= OnClickEnemyHandler;
+            _mouseEventHandler.OnEndHandling -= OnEndHandling;
+            _mouseEventHandler.OnDuringHandling -= OnDuringHandling;
 
             OnDeselectedAction?.Invoke();
         }

@@ -12,8 +12,8 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: dbdce8ac5ef109449b563cb3a5e8c65f, type: 3}
   m_Name: FlintlockMusketWeaponInfo
   m_EditorClassIdentifier: 
-  Accuracy: 10
+  Accuracy: 30
   Damage: 50
   Range: 100
-  ReloadTime: 10
+  ReloadTime: 15
   MaxAmmo: 20

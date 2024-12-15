@@ -1,42 +1,60 @@
+using _KMH_Framework;
 using System;
 using System.Collections.Generic;
 using UnityEngine;
 
 namespace _TW_Framework
 {
-    public class IngameManager : BaseSingleton<IngameManager>
+    public class PlayerFormationHandler : BaseFormationHandler
     {
-        private const string LOG_FORMAT = "<color=white><b>[IngameManager]</b></color> {0}";
+        private const string LOG_FORMAT = "<color=white><b>[PlayerFormationHandler]</b></color> {0}";
 
+        [Header("=== PlayerFormationHandler ===")]
         [SerializeField]
         protected MouseEventHandler mouseEventHandler;
-
-        [Space(10)]
         [SerializeField]
-        protected List<PlayerFormationController> allControllerList = new List<PlayerFormationController>();
+        protected UI_FormationController uiController;
+
         [ReadOnly]
         [SerializeField]
         protected List<PlayerFormationController> selectedControllerList = new List<PlayerFormationController>();
 
         public Action<Dictionary<int, bool>> OnSelectStateChanged;
 
-        protected override void Awake()
+        protected virtual void Awake()
         {
-            base.Awake();
-
-            for (int i = 0; i < allControllerList.Count; i++)
-            {
-                allControllerList[i].Initialize(i);
-            }
-
             mouseEventHandler.OnEndMouseSelect += OnEndMouseSelect;
         }
 
-        protected override void OnDestroy()
+        protected virtual void OnDestroy()
         {
-            base.OnDestroy();
-
             mouseEventHandler.OnEndMouseSelect -= OnEndMouseSelect;
+        }
+
+        public override void Initialize(UnitInfo[] unitInfos, Vector3[] startPoints, float unitDistance, float facingAngle)
+        {
+            for (int i = 0; i < unitInfos.Length; i++)
+            {
+                GameObject controllerObj = new GameObject("Controller_" + unitInfos[i]._UnitType);
+                controllerObj.transform.SetParent(this.transform);
+
+                PlayerFormationController controller = controllerObj.AddComponent<PlayerFormationController>();
+                controller.Initialize(unitInfos[i], startPoints[i], unitDistance, i, facingAngle, mouseEventHandler);
+
+                allControllerList.Add(controller);
+            }
+
+            uiController.Initialize(unitInfos);
+        }
+
+        public override void OnAllUnitsDead(BaseFormationController controller)
+        {
+            if (selectedControllerList.Contains(controller as PlayerFormationController) == true)
+            {
+                selectedControllerList.Remove(controller as PlayerFormationController);
+            }
+
+            base.OnAllUnitsDead(controller);
         }
 
         public List<PlayerFormationController> GetSelectedControllerList()
@@ -46,7 +64,7 @@ namespace _TW_Framework
 
         protected void OnEndMouseSelect(List<PlayerFormationController> controllerList)
         {
-            List<PlayerFormationController> deselectedControllerList = new List<PlayerFormationController>(allControllerList);
+            List<PlayerFormationController> deselectedControllerList = new List<PlayerFormationController>(allControllerList.ConvertAll(x => x as PlayerFormationController));
             deselectedControllerList.RemoveAll(x => controllerList.Contains(x));
             
             controllerList.ForEach(SelectController);
@@ -64,7 +82,7 @@ namespace _TW_Framework
 
         public void SelectController(int index)
         {
-            SelectController(allControllerList[index]);
+            SelectController(allControllerList[index] as PlayerFormationController);
         }
 
         public void SelectController(PlayerFormationController controller)
@@ -78,7 +96,7 @@ namespace _TW_Framework
 
         public void DeselectController(int index)
         {
-            DeselectController(allControllerList[index]);
+            DeselectController(allControllerList[index] as PlayerFormationController);
         }
 
         public void DeselectController(PlayerFormationController controller)
@@ -92,7 +110,7 @@ namespace _TW_Framework
 
         public void SelectStateChanged(int index)
         {
-            SelectStateChanged(allControllerList[index]);
+            SelectStateChanged(allControllerList[index] as PlayerFormationController);
         }
 
         public void SelectStateChanged(PlayerFormationController controller)

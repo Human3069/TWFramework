@@ -16,10 +16,10 @@ MonoBehaviour:
   MaxHealth: 100
   MeleeDamage: 10
   MeleeSpeed: 1
+  MeleeRange: 2
   _WeaponInfo: {fileID: 11400000, guid: 56546947dc46f0e4d9a4679a782294dd, type: 2}
-  RangedSpeed: 15
-  RangedAccuracy: 10
   _FormationType: 3
+  UnitCount: 40
   UnitSpacing: 4
   NoiseAmount: 2
   UnitPrefab: {fileID: 8091776970705940152, guid: 63b4bb0ca6f054c4e87b2d0648759458, type: 3}

@@ -1,0 +1,30 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 76275276ea612434a833b996dac7f4a3, type: 3}
+  m_Name: InitialInfo
+  m_EditorClassIdentifier: 
+  SceneName: InBattle
+  PlayerUnitInfos:
+  - {fileID: 11400000, guid: 96a274b0f54eee84d9c561dd4cdf1ae7, type: 2}
+  - {fileID: 11400000, guid: 24f9e6d664e82ea40ac3a8aeb10c03d7, type: 2}
+  - {fileID: 11400000, guid: 58bbc443e45d17e48b6a9147f68af800, type: 2}
+  - {fileID: 11400000, guid: b9dee11bd823ed747be470c0cb99f9be, type: 2}
+  playerUnitInfoPoint: {x: 0, y: 0, z: 0}
+  playerFacingAngle: 0
+  EnemyUnitInfos:
+  - {fileID: 11400000, guid: 96a274b0f54eee84d9c561dd4cdf1ae7, type: 2}
+  - {fileID: 11400000, guid: 96a274b0f54eee84d9c561dd4cdf1ae7, type: 2}
+  enemyUnitInfoPoint: {x: 0, y: 0, z: 120}
+  enemyFacingAngle: 180
+  maxUnitInfoCount: 10
+  distancePerUnitInfo: 40
+  UnitDistance: 30

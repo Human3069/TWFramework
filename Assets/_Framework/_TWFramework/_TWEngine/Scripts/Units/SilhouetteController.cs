@@ -8,23 +8,22 @@ namespace _TW_Framework
     {
         private const string LOG_FORMAT = "<color=white><b>[SilhouetteController]</b></color> {0}";
 
-        [SerializeField]
         protected MouseEventHandler _mouseEventHandler;
-        [SerializeField]
         protected PlayerFormationController _controller;
+        protected GameObject _silhouettePrefab;
 
-        [Space(10)]
-        [SerializeField]
-        protected GameObject silhouettePrefab;
         [ReadOnly]
         [SerializeField]
         protected List<GameObject> silhouetteObjList = new List<GameObject>(); 
 
         protected bool isEventOn;
 
-        protected void Awake()
+        public void Initialize(PlayerFormationController controller, MouseEventHandler mouseEvent, GameObject silhouettePrefab, List<Vector3> posList, float facingAngle)
         {
-            _controller.OnControllerInitialized += OnControllerInitialized;
+            _controller = controller;
+            _mouseEventHandler = mouseEvent;
+            _silhouettePrefab = silhouettePrefab;
+
             _controller.OnUnitCountChanged += OnUnitCountChanged;
 
             _controller.OnSelectedAction += OnSelected;
@@ -32,11 +31,17 @@ namespace _TW_Framework
 
             for (int i = 0; i < _controller.UnitHandlerList.Count; i++)
             {
-                GameObject _obj = Instantiate(silhouettePrefab);
+                GameObject _obj = Instantiate(_silhouettePrefab);
                 _obj.SetActive(false);
                 _obj.transform.parent = this.transform;
 
                 silhouetteObjList.Add(_obj);
+            }
+
+            for (int i = 0; i < silhouetteObjList.Count; i++)
+            {
+                silhouetteObjList[i].transform.position = posList[i];
+                silhouetteObjList[i].transform.eulerAngles = new Vector3(0f, facingAngle, 0f);
             }
         }
 
@@ -46,7 +51,6 @@ namespace _TW_Framework
             _controller.OnSelectedAction -= OnSelected;
 
             _controller.OnUnitCountChanged -= OnUnitCountChanged;
-            _controller.OnControllerInitialized -= OnControllerInitialized;
         }
 
         protected void Update()
@@ -72,32 +76,13 @@ namespace _TW_Framework
             _mouseEventHandler.OnStartHandling -= OnStartHandling;
         }
 
-        protected void OnControllerInitialized(Vector3 startPos, Vector3 endPos)
-        {
-            Vector3 leftDirection = Vector3.Cross(endPos - startPos, Vector3.up);
-            float _length = (endPos - startPos).magnitude;
-            _length = Mathf.Clamp(_length, 0.001f, float.MaxValue);
-
-            float normalizedRemained = _controller.UnitsPerRowRemained / _length;
-            Vector3 middlePos = Vector3.LerpUnclamped(startPos, endPos, 0.5f - normalizedRemained);
-
-            float facingAngle = Mathf.Atan2(leftDirection.x, leftDirection.z) * Mathf.Rad2Deg;
-            List<Vector3> posList = FormationPositionerEx.GetAlignedPositionList(silhouetteObjList.Count, _controller.CurrentFormation, middlePos, facingAngle);
-
-            for (int i = 0; i < silhouetteObjList.Count; i++)
-            {
-                silhouetteObjList[i].transform.position = posList[i];
-                silhouetteObjList[i].transform.eulerAngles = new Vector3(0f, facingAngle, 0f);
-            }
-        }
-
         protected void OnUnitCountChanged(int unitCount)
         {
             if (silhouetteObjList.Count < unitCount)
             {
                 for (int i = silhouetteObjList.Count; i < unitCount; i++)
                 {
-                    GameObject _obj = Instantiate(silhouettePrefab, transform.position, Quaternion.identity);
+                    GameObject _obj = Instantiate(_silhouettePrefab, transform.position, Quaternion.identity);
                     _obj.SetActive(false);
                     _obj.transform.parent = this.transform;
 
@@ -148,7 +133,7 @@ namespace _TW_Framework
             float _length = (controlStartPos - controlEndPos).magnitude;
             _length = Mathf.Clamp(_length, 0.001f, float.MaxValue);
 
-            if (_length > FormationController.MAX_FORMABLE_THRESHOLD)
+            if (_length > BaseFormationController.MAX_FORMABLE_THRESHOLD)
             {
                 float normalizedRemained = _controller.UnitsPerRowRemained / _length;
                 Vector3 middlePos = Vector3.LerpUnclamped(controlStartPos, controlEndPos, 0.5f - normalizedRemained);

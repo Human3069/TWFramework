@@ -4,7 +4,7 @@ using UnityEngine;
 
 namespace _TW_Framework
 {
-    public class EnemyFormationController : FormationController
+    public class EnemyFormationController : BaseFormationController
     {
         
     }

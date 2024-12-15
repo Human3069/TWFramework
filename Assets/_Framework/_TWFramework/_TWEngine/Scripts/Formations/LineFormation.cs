@@ -8,7 +8,7 @@ namespace _TW_Framework
     {
         private float spacing;
 
-        public LineFormation(FormationController controller) : this(controller.UnitSpacing) {}
+        public LineFormation(BaseFormationController controller) : this(controller.UnitSpacing) {}
 
         public LineFormation(float spacing)
         {

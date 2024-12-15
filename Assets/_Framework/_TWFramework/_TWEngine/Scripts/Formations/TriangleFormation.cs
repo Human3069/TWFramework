@@ -11,7 +11,7 @@ namespace _TW_Framework
         private bool centerUnits;
         private bool pivotInMiddle;
 
-        public TriangleFormation(FormationController controller) : this(controller.UnitSpacing, true, controller.IsPivotInMiddle) { }
+        public TriangleFormation(BaseFormationController controller) : this(controller.UnitSpacing, true, controller.IsPivotInMiddle) { }
 
         public TriangleFormation(float spacing, bool centerUnits = true, bool pivotInMiddle = false)
         {

@@ -13,7 +13,7 @@ namespace _TW_Framework
         private bool centerUnits;
         private bool pivotInMiddle;
 
-        public RectangleFormation(FormationController controller) : this(controller.UnitsPerRow, controller.UnitSpacing, true, controller.IsPivotInMiddle) { }
+        public RectangleFormation(BaseFormationController controller) : this(controller.UnitsPerRow, controller.UnitSpacing, true, controller.IsPivotInMiddle) { }
 
         public RectangleFormation(int columnCount, float spacing, bool centerUnits = true, bool pivotInMiddle = false)
         {

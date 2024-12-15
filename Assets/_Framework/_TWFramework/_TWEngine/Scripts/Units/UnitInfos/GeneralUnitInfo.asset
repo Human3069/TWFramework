@@ -13,13 +13,13 @@ MonoBehaviour:
   m_Name: GeneralUnitInfo
   m_EditorClassIdentifier: 
   _UnitType: 0
-  MaxHealth: 100
-  MeleeDamage: 10
+  MaxHealth: 250
+  MeleeDamage: 60
   MeleeSpeed: 1
+  MeleeRange: 2
   _WeaponInfo: {fileID: 11400000, guid: 81cc3f4d924729d40929881a0c400009, type: 2}
-  RangedSpeed: 15
-  RangedAccuracy: 10
   _FormationType: 13
+  UnitCount: 20
   UnitSpacing: 2
   NoiseAmount: 0
   UnitPrefab: {fileID: 8091776970705940152, guid: 63b4bb0ca6f054c4e87b2d0648759458, type: 3}

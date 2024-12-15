@@ -9,7 +9,7 @@ namespace _TW_Framework
         private float spacing;
         private float circleAngle;
 
-        public CircleFormation(FormationController controller) : this(controller.UnitSpacing) { }
+        public CircleFormation(BaseFormationController controller) : this(controller.UnitSpacing) { }
 
         public CircleFormation(float spacing, float circleAngle = 360f)
         {

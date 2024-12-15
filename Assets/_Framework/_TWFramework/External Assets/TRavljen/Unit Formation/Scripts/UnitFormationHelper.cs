@@ -39,7 +39,7 @@ namespace TRavljen.UnitFormation
 
         // 단점 : 앞으로 Formation 유지한 채 이동할 때, Formation 깨트린 채 이동할 때 꼬임
         // 장점 : 좌, 우, 뒤로 Formation 유지한 채 이동할 때, Formation 깨트린 채 이동할 때 덜 꼬임 (일부 잔여물이 있긴 함)
-        public static void SetPositions_ShortestByIndex_Asc(FormationController _controller, List<Vector3> posList, float facingAngle)
+        public static void SetPositions_ShortestByIndex_Asc(BaseFormationController _controller, List<Vector3> posList, float facingAngle)
         {
             Dictionary<Vector3, UnitHandler> selectedNearestDic = new Dictionary<Vector3, UnitHandler>();
 
@@ -68,7 +68,7 @@ namespace TRavljen.UnitFormation
 
         // 단점 : 뒤로 Formation 유지한 채 이동할 때, Formation 깨트린 채 이동할 때 꼬임
         // 장점 : 앞, 좌, 우로 Formation 유지한 채 이동할 때, Formation 깨트린 채 이동할 때 덜 꼬임 (일부 잔여물이 있긴 함)
-        public static void SetPositions_ShortestByIndex_Desc(FormationController _controller, List<Vector3> posList, float facingAngle)
+        public static void SetPositions_ShortestByIndex_Desc(BaseFormationController _controller, List<Vector3> posList, float facingAngle)
         {
             Dictionary<Vector3, UnitHandler> selectedNearestDic = new Dictionary<Vector3, UnitHandler>();
 

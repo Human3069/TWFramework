@@ -51,7 +51,7 @@ namespace _TW_Framework
 
         protected MeshCollider selectionMeshCollider;
 
-        public Action<FormationController> OnClickEnemyHandler;
+        public Action<BaseFormationController> OnClickEnemyHandler;
 
         public Action<Vector3, Vector3> OnStartHandling;
         public Action<Vector3, Vector3> OnDuringHandling;

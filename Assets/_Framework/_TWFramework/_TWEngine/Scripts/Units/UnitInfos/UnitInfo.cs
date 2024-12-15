@@ -31,16 +31,16 @@ namespace _TW_Framework
         public int MaxHealth;
 
         [Space(10)]
-        public int MeleeDamage;
-        public int MeleeSpeed;
+        public float MeleeDamage;
+        public float MeleeSpeed;
+        public float MeleeRange;
 
         [Space(10)]
         public WeaponInfo _WeaponInfo;
-        public int RangedSpeed;
-        public int RangedAccuracy;
 
         [Header("=== Formation Infos ===")]
         public FormationType _FormationType;
+        public int UnitCount;
         public float UnitSpacing;
         public float NoiseAmount;
         public GameObject UnitPrefab;
