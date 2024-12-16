@@ -1,9 +1,5 @@
-﻿using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Reflection;
+﻿using System.Collections.Generic;
 using UnityEngine;
-using UnityEngine.EventSystems;
 using UnityEngine.UI;
 
 namespace _TW_Framework
@@ -22,6 +18,18 @@ namespace _TW_Framework
 
         [Header("Bottombar Panel")]
         [SerializeField]
+        protected Toggle rectangleFormationToggle;
+        [SerializeField]
+        protected Toggle triangleFormationToggle;
+        [SerializeField]
+        protected Toggle coneFormationToggle;
+        [SerializeField]
+        protected Toggle squareFormationToggle;
+        [SerializeField]
+        protected Toggle skirmishFormationToggle;
+
+        [Space(10)]
+        [SerializeField]
         protected GameObject buttonPrefab;
         [SerializeField]
         protected Transform cardParent;
@@ -34,11 +42,19 @@ namespace _TW_Framework
 
         protected void Awake()
         {
+            TWManager.Instance.Player.MouseEventHandler.OnStartMouseSelect += OnStartMouseSelect;
+            TWManager.Instance.Player.MouseEventHandler.OnDuringMouseSelect += OnDuringMouseSelect;
             TWManager.Instance.Player.OnSelectStateChanged += OnSelectStateChanged;
 
             unitCountText.text = "Unit Count: 13";
             unitSpacingText.text = "Unit Spacing : 2.00";
             unitNoiseText.text = "Unit Noise : 0.00";
+
+            rectangleFormationToggle.onValueChanged.AddListener(OnValueChangedRectangleFormationToggle);
+            triangleFormationToggle.onValueChanged.AddListener(OnValueChangedTriangleFormationToggle);
+            coneFormationToggle.onValueChanged.AddListener(OnValueChangedConeFormationToggle);
+            squareFormationToggle.onValueChanged.AddListener(OnValueChangedSquareFormationToggle);
+            skirmishFormationToggle.onValueChanged.AddListener(OnValueChangedSkirmishFormationToggle);
         }
 
         public void Initialize(UnitInfo[] unitInfos)
@@ -52,6 +68,7 @@ namespace _TW_Framework
                 button.onClick.AddListener(() => OnClickCardButton(localIndex));
 
                 cardButtonList.Add(button);
+                button.transform.GetChild(0).GetComponent<Image>().sprite = unitInfos[i].IconSprite;
             }
         }
 
@@ -85,7 +102,7 @@ namespace _TW_Framework
             Debug.LogFormat(LOG_FORMAT, "OnClickRectangleFormationButton()");
 
             List<PlayerFormationController> selectedControllerList = TWManager.Instance.Player.GetSelectedControllerList();
-            selectedControllerList.ForEach(x => x.ChangeUnitFormation(new RectangleFormation(x)));
+            selectedControllerList.ForEach(x => x.ChangeUnitFormation(FormationType.Rectangle));
         }
 
         public void OnClickCircleFormationButton()
@@ -93,7 +110,7 @@ namespace _TW_Framework
             Debug.LogFormat(LOG_FORMAT, "OnClickCircleFormationButton()");
 
             List<PlayerFormationController> selectedControllerList = TWManager.Instance.Player.GetSelectedControllerList();
-            selectedControllerList.ForEach(x => x.ChangeUnitFormation(new CircleFormation(x)));
+            selectedControllerList.ForEach(x => x.ChangeUnitFormation(FormationType.Circle));
         }
 
         public void OnClickLineFormationButton()
@@ -101,7 +118,7 @@ namespace _TW_Framework
             Debug.LogFormat(LOG_FORMAT, "OnClickLineFormationButton()");
 
             List<PlayerFormationController> selectedControllerList = TWManager.Instance.Player.GetSelectedControllerList();
-            selectedControllerList.ForEach(x => x.ChangeUnitFormation(new LineFormation(x)));
+            selectedControllerList.ForEach(x => x.ChangeUnitFormation(FormationType.Line));
         }
 
         public void OnClickTriangleFormationButton()
@@ -109,7 +126,7 @@ namespace _TW_Framework
             Debug.LogFormat(LOG_FORMAT, "OnClickTriangleFormationButton()");
 
             List<PlayerFormationController> selectedControllerList = TWManager.Instance.Player.GetSelectedControllerList();
-            selectedControllerList.ForEach(x => x.ChangeUnitFormation(new TriangleFormation(x)));
+            selectedControllerList.ForEach(x => x.ChangeUnitFormation(FormationType.Triangle));
         }
 
         public void OnClickConeFormationButton()
@@ -117,7 +134,7 @@ namespace _TW_Framework
             Debug.LogFormat(LOG_FORMAT, "OnClickConeFormationButton()");
 
             List<PlayerFormationController> selectedControllerList = TWManager.Instance.Player.GetSelectedControllerList();
-            selectedControllerList.ForEach(x => x.ChangeUnitFormation(new ConeFormation(x)));
+            selectedControllerList.ForEach(x => x.ChangeUnitFormation(FormationType.Cone));
         }
 
         public void OnValueChangedPivotToggle(bool isOn)
@@ -126,7 +143,72 @@ namespace _TW_Framework
             selectedControllerList.ForEach(x => x.IsPivotInMiddle = isOn);
         }
 
+        protected void OnValueChangedRectangleFormationToggle(bool isOn)
+        {
+            List<PlayerFormationController> selectedControllerList = TWManager.Instance.Player.GetSelectedControllerList();
+            if (isOn == true)
+            {
+                selectedControllerList.ForEach(x => x.ChangeUnitFormation(FormationType.Rectangle));
+            }
+        }
+
+        protected void OnValueChangedTriangleFormationToggle(bool isOn)
+        {
+            List<PlayerFormationController> selectedControllerList = TWManager.Instance.Player.GetSelectedControllerList();
+            if (isOn == true)
+            {
+                selectedControllerList.ForEach(x => x.ChangeUnitFormation(FormationType.Triangle));
+            }
+        }
+
+        protected void OnValueChangedConeFormationToggle(bool isOn)
+        {
+            List<PlayerFormationController> selectedControllerList = TWManager.Instance.Player.GetSelectedControllerList();
+
+            if (isOn == true)
+            {
+                selectedControllerList.ForEach(x => x.ChangeUnitFormation(FormationType.Cone));
+            }
+        }
+
+        protected void OnValueChangedSquareFormationToggle(bool isOn)
+        {
+            List<PlayerFormationController> selectedControllerList = TWManager.Instance.Player.GetSelectedControllerList();
+
+            if (isOn == true)
+            {
+                selectedControllerList.ForEach(x => x.ChangeUnitFormation(FormationType.Square));
+            }
+        }
+
+        protected void OnValueChangedSkirmishFormationToggle(bool isOn)
+        {
+            List<PlayerFormationController> selectedControllerList = TWManager.Instance.Player.GetSelectedControllerList();
+
+            if (isOn == true)
+            {
+                selectedControllerList.ForEach(x => x.ChangeUnitFormation(FormationType.Skirmish));
+            }
+        }
+
         protected void OnEndMouseSelect(List<PlayerFormationController> controllerList)
+        {
+            foreach (PlayerFormationController controller in controllerList)
+            {
+                cardButtonList[controller.SelectedIndex].image.color = Color.green;
+            }
+        }
+
+        protected void OnStartMouseSelect()
+        {
+            List<PlayerFormationController> allControllerList = TWManager.Instance.Player.GetAllControllerList();
+            foreach (PlayerFormationController controller in allControllerList)
+            {
+                cardButtonList[controller.SelectedIndex].image.color = Color.white;
+            }
+        }
+
+        protected void OnDuringMouseSelect(List<PlayerFormationController> controllerList)
         {
             foreach (PlayerFormationController controller in controllerList)
             {
@@ -147,13 +229,16 @@ namespace _TW_Framework
                     cardButtonList[pair.Key].image.color = Color.white;
                 }
             }
+
+            ResetFormationToggles();
         }
 
         protected void OnClickCardButton(int targetIndex)
         {
             List<PlayerFormationController> selectedControllerList = TWManager.Instance.Player.GetSelectedControllerList();
+            List<PlayerFormationController> deselectedControllerList = TWManager.Instance.Player.GetAllControllerList();
 
-            List<int> deselectedIndexList = new List<int>() { 0, 1, 2 };
+            List<int> deselectedIndexList = deselectedControllerList.ConvertAll(x => x.SelectedIndex);
             List<int> selectedIndexList = selectedControllerList.ConvertAll(x => x.SelectedIndex);
 
             if (Input.GetKey(KeyCode.LeftShift) == true)
@@ -205,6 +290,64 @@ namespace _TW_Framework
             foreach (int index in selectedIndexList)
             {
                 TWManager.Instance.Player.SelectStateChanged(index);
+            }
+
+            ResetFormationToggles();
+        }
+
+        protected void ResetFormationToggles()
+        {
+            FormationType commonType = FormationType.Rectangle | FormationType.Square | FormationType.Skirmish | FormationType.Triangle | FormationType.Cone | FormationType.Circle | FormationType.Line;
+            FormationType selectedType = FormationType.Rectangle | FormationType.Square | FormationType.Skirmish | FormationType.Triangle | FormationType.Cone | FormationType.Circle | FormationType.Line;
+            foreach (PlayerFormationController controller in TWManager.Instance.Player.GetSelectedControllerList())
+            {
+                FormationType availableType = controller._UnitInfo._FormationType;
+                FormationType currentType = controller.CurrentFormationType;
+
+                commonType &= availableType;
+                selectedType &= currentType;
+            }
+
+            rectangleFormationToggle.gameObject.SetActive(commonType.HasFlag(FormationType.Rectangle));
+            squareFormationToggle.gameObject.SetActive(commonType.HasFlag(FormationType.Square));
+            skirmishFormationToggle.gameObject.SetActive(commonType.HasFlag(FormationType.Skirmish));
+            triangleFormationToggle.gameObject.SetActive(commonType.HasFlag(FormationType.Triangle));
+            coneFormationToggle.gameObject.SetActive(commonType.HasFlag(FormationType.Cone));
+
+            rectangleFormationToggle.SetIsOnWithoutNotify(false);
+            squareFormationToggle.SetIsOnWithoutNotify(false);
+            skirmishFormationToggle.SetIsOnWithoutNotify(false);
+            triangleFormationToggle.SetIsOnWithoutNotify(false);
+            coneFormationToggle.SetIsOnWithoutNotify(false);
+
+            SelectTypeToToggle(selectedType)?.SetIsOnWithoutNotify(true);
+        }
+
+        protected Toggle SelectTypeToToggle(FormationType type)
+        {
+            if (type == FormationType.Rectangle)
+            {
+                return rectangleFormationToggle;
+            }
+            else if (type == FormationType.Square)
+            {
+                return squareFormationToggle;
+            }
+            else if (type == FormationType.Skirmish)
+            {
+                return skirmishFormationToggle;
+            }
+            else if (type == FormationType.Triangle)
+            {
+                return triangleFormationToggle;
+            }
+            else if (type == FormationType.Cone)
+            {
+                return coneFormationToggle;
+            }
+            else
+            {
+                return null;
             }
         }
     }

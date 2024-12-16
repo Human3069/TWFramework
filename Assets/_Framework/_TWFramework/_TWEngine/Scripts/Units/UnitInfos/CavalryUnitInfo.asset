@@ -18,9 +18,18 @@ MonoBehaviour:
   MeleeSpeed: 1
   MeleeRange: 2
   _WeaponInfo: {fileID: 11400000, guid: c85ac72c415017849a328a75a67761e9, type: 2}
-  _FormationType: 13
+  _FormationType: 29
   UnitCount: 40
-  UnitSpacing: 3
-  NoiseAmount: 0
   UnitPrefab: {fileID: 8091776970705940152, guid: f07865beab5d94143a168c44b3affd4b, type: 3}
   SilhouettePrefab: {fileID: 8091776970705940152, guid: 5f23ab441824e9d4a86abcd0a39928cd, type: 3}
+  FormationTypeDic:
+    _serializedList:
+    - Key: 25
+      Value:
+        UnitSpacing: 3
+        NoiseAmount: 0
+    - Key: 4
+      Value:
+        UnitSpacing: 6
+        NoiseAmount: 2
+  IconSprite: {fileID: 21300000, guid: 58df572035f5c9d4ea8f332e854574cd, type: 3}

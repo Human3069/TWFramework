@@ -1,4 +1,5 @@
 ﻿using Cysharp.Threading.Tasks;
+using EPOOutline;
 using System;
 using UnityEngine;
 using UnityEngine.AI;
@@ -21,6 +22,7 @@ namespace _TW_Framework
         protected Animation _animation;
         protected NavMeshAgent _agent;
         protected AudioSource _audioSource;
+        protected Outlinable _outlinable;
 
         [HideInInspector]
         public BaseFormationController Controller;
@@ -177,6 +179,7 @@ namespace _TW_Framework
             _animation = this.GetComponent<Animation>();
             _agent = this.GetComponent<NavMeshAgent>();
             _audioSource = this.GetComponent<AudioSource>();
+            _outlinable = this.GetComponent<Outlinable>();
         }
 
         protected void OnDestroy()
@@ -201,6 +204,16 @@ namespace _TW_Framework
 
             maxHealth = unitInfo.MaxHealth;
             CurrentHealth = maxHealth;
+        }
+
+        public void OnSelected()
+        {
+            _outlinable.enabled = true;
+        }
+
+        public void OnDeselected()
+        {
+            _outlinable.enabled = false;
         }
 
         protected void Update()
@@ -248,11 +261,13 @@ namespace _TW_Framework
                 Controller.RemoveUnit(this);
             }
             IsDead = true;
+
+            Debug.Log("dead");
         }
 
         void IDamageable.OnDamaged()
         {
-            _animation.PlayQueued("OnDamaged");
+            // _animation.PlayQueued("OnDamaged");
         }
 
         public void PlayAnimation(string clipName)
@@ -352,6 +367,8 @@ namespace _TW_Framework
 
             [ReadOnly]
             public UnitHandler RangedAttackingUnit;
+            [ReadOnly]
+            public PoolerType _PoolerType;
 
             [Space(10)]
             [ReadOnly]
@@ -399,6 +416,8 @@ namespace _TW_Framework
                 rangedAttackSpeed = weaponInfo.ReloadTime;
                 rangedAttackRange = weaponInfo.Range;
                 accuracy = weaponInfo.Accuracy;
+
+                _PoolerType = weaponInfo._PoolerType;
             }
 
             protected void OnStateChanged(UnitState unitState)
@@ -465,7 +484,7 @@ namespace _TW_Framework
 
                     _unitHandler.muzzleFlash.Play();
 
-                    PoolerType.MusketBullet.EnablePool<BulletHandler>(BeforePool);
+                    _PoolerType.EnablePool<BulletHandler>(BeforePool);
                     void BeforePool(BulletHandler bullet)
                     {
                         bullet.Initialize(_unitHandler._TeamType, rangedAttackDamage);

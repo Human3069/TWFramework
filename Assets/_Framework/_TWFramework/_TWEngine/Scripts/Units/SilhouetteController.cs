@@ -29,6 +29,8 @@ namespace _TW_Framework
             _controller.OnSelectedAction += OnSelected;
             _controller.OnDeselectedAction += OnDeselected;
 
+            _controller.OnUnitFormationChanged += ReinstantiateSilhouetteFormation;
+
             for (int i = 0; i < _controller.UnitHandlerList.Count; i++)
             {
                 GameObject _obj = Instantiate(_silhouettePrefab);
@@ -47,6 +49,8 @@ namespace _TW_Framework
 
         protected void OnDestroy()
         {
+            _controller.OnUnitFormationChanged += ReinstantiateSilhouetteFormation;
+
             _controller.OnDeselectedAction -= OnDeselected;
             _controller.OnSelectedAction -= OnSelected;
 
@@ -99,6 +103,25 @@ namespace _TW_Framework
                     Destroy(_obj);
                 }
             }
+
+            ReinstantiateSilhouetteFormation();
+        }
+
+        protected void ReinstantiateSilhouetteFormation()
+        {
+            Debug.Log("reints");
+
+            // (Vector3 startPos, Vector3 endPos) = _controller.GetControlPoints();
+            // Vector3 middlePos = Vector3.Lerp(startPos, endPos, 0.5f);
+            // 
+            // float facingAngle = _controller.CurrentFacingAngle;
+            // List<Vector3> posList = FormationPositionerEx.GetAlignedPositionList(silhouetteObjList.Count, _controller.CurrentFormation, middlePos, facingAngle);
+            // 
+            // for (int i = 0; i < silhouetteObjList.Count; i++)
+            // {
+            //     silhouetteObjList[i].transform.position = posList[i];
+            //     silhouetteObjList[i].transform.eulerAngles = new Vector3(0f, facingAngle, 0f);
+            // }
         }
 
         protected void OnStartHandling(Vector3 lineStartPos, Vector3 lineEndPos)

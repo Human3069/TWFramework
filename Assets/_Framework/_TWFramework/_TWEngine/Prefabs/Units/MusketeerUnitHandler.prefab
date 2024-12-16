@@ -209,7 +209,7 @@ GameObject:
   - component: {fileID: 8091776970705940153}
   - component: {fileID: 9051229348312674934}
   - component: {fileID: 8091776970705940154}
-  - component: {fileID: 8502023578091956612}
+  - component: {fileID: 2631947040344585326}
   - component: {fileID: 8907931714062519168}
   - component: {fileID: 8556016846038936868}
   - component: {fileID: 5429141321770747061}
@@ -270,6 +270,7 @@ MonoBehaviour:
     meleeAttackRange: 2
   rangedAttack:
     RangedAttackingUnit: {fileID: 0}
+    _PoolerType: 0
     rangedAttackDamage: 50
     rangedAttackSpeed: 15
     reloadingRemained: 0
@@ -300,8 +301,8 @@ NavMeshAgent:
   m_BaseOffset: 0
   m_WalkableMask: 4294967295
   m_ObstacleAvoidanceType: 4
---- !u!136 &8502023578091956612
-CapsuleCollider:
+--- !u!65 &2631947040344585326
+BoxCollider:
   m_ObjectHideFlags: 0
   m_CorrespondingSourceObject: {fileID: 0}
   m_PrefabInstance: {fileID: 0}
@@ -318,10 +319,8 @@ CapsuleCollider:
   m_IsTrigger: 0
   m_ProvidesContacts: 0
   m_Enabled: 1
-  serializedVersion: 2
-  m_Radius: 0.5
-  m_Height: 2
-  m_Direction: 1
+  serializedVersion: 3
+  m_Size: {x: 1, y: 2, z: 1}
   m_Center: {x: 0, y: 1, z: 0}
 --- !u!111 &8907931714062519168
 Animation:
@@ -332,9 +331,8 @@ Animation:
   m_GameObject: {fileID: 8091776970705940152}
   m_Enabled: 1
   serializedVersion: 4
-  m_Animation: {fileID: 7400000, guid: a705432219c3dc144ac07a4ed9b419d6, type: 2}
+  m_Animation: {fileID: 7400000, guid: 1eefe53a0d35f79469312af3e12c8a69, type: 2}
   m_Animations:
-  - {fileID: 7400000, guid: a705432219c3dc144ac07a4ed9b419d6, type: 2}
   - {fileID: 7400000, guid: 1eefe53a0d35f79469312af3e12c8a69, type: 2}
   - {fileID: 7400000, guid: e4d24aa3d1f026948a2982d998462dd5, type: 2}
   m_WrapMode: 0
@@ -393,7 +391,7 @@ MonoBehaviour:
   renderStyle: 1
   outlineParameters:
     enabled: 1
-    color: {r: 1, g: 0, b: 0, a: 1}
+    color: {r: 0, g: 1, b: 0, a: 1}
     dilateShift: 1
     blurShift: 1
     fillPass:
@@ -401,7 +399,7 @@ MonoBehaviour:
       serializedProperties:
       - PropertyName: _PublicColor
         Property:
-          ColorValue: {r: 1, g: 0, b: 0, a: 0.2}
+          ColorValue: {r: 0, g: 1, b: 0, a: 0.2}
           FloatValue: 0
           VectorValue: {x: 0, y: 0, z: 0, w: 0}
           PropertyType: 0

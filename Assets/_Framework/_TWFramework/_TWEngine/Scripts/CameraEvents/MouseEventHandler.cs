@@ -57,6 +57,8 @@ namespace _TW_Framework
         public Action<Vector3, Vector3> OnDuringHandling;
         public Action<Vector3, Vector3> OnEndHandling;
 
+        public Action OnStartMouseSelect;
+        public Action<List<PlayerFormationController>> OnDuringMouseSelect;
         public Action<List<PlayerFormationController>> OnEndMouseSelect;
 
         protected void Start()
@@ -66,7 +68,6 @@ namespace _TW_Framework
 
             Debug.Assert(selectionMeshCollider.convex == true && selectionMeshCollider.isTrigger == true);
         }
-
 
         protected void FixedUpdate()
         {
@@ -99,22 +100,37 @@ namespace _TW_Framework
             {
                 Ray ray = _camera.ScreenPointToRay(Input.mousePosition);
                 Physics.Raycast(ray, out RaycastHit hit);
+                Collider[] overlappedColliders = Physics.OverlapSphere(hit.point, 1f);
+                UnitHandler overlappedUnit = null;
 
-                if (hit.collider != null &&
-                    hit.collider.TryGetComponent<UnitHandler>(out UnitHandler unit) == true &&
-                    unit._TeamType == TeamType.Enemy)
+                foreach (Collider overlappedCollider in overlappedColliders)
                 {
-                    if (OnClickEnemyHandler != null)
+                    if (overlappedCollider.TryGetComponent<UnitHandler>(out overlappedUnit) == true)
                     {
-                        OnClickEnemyHandler(unit.Controller);
+                        if (overlappedUnit._TeamType == TeamType.Enemy)
+                        {
+                            break;
+                        }
+                        else
+                        {
+                            overlappedUnit = null;
+                        }
                     }
                 }
-                else
+
+                if (overlappedUnit == null)
                 {
                     IsHandling = true;
                     _lineRenderer.enabled = true;
 
                     PostOnRightClicked(ray).Forget();
+                }
+                else
+                {
+                    if (OnClickEnemyHandler != null)
+                    {
+                        OnClickEnemyHandler(overlappedUnit.Controller);
+                    }
                 }
             }
         }
@@ -122,7 +138,12 @@ namespace _TW_Framework
         protected async UniTaskVoid PostOnLeftClicked()
         {
             Vector2 startScreenPoint = Input.mousePosition;
+            Ray ray = _camera.ScreenPointToRay(startScreenPoint);
+            Physics.Raycast(ray, out RaycastHit hit, Mathf.Infinity, groundLayerMask);
+            Vector3 startPos = hit.point;
+
             selectedControllerList.Clear();
+            OnStartMouseSelect?.Invoke();
 
             while (Input.GetMouseButton(0) == true)
             {
@@ -131,11 +152,32 @@ namespace _TW_Framework
 
                 Mesh pyramidMesh = selectionPyramid.GenerateMesh();
                 selectionMeshCollider.sharedMesh = pyramidMesh;
+                
+                OnDuringMouseSelect?.Invoke(selectedControllerList);
 
                 await UniTask.Yield(this.destroyCancellationToken);
             }
 
             selectionMeshCollider.sharedMesh = null;
+
+            selectedControllerList.Sort(ComparisionFromDistance);
+            int ComparisionFromDistance(PlayerFormationController x, PlayerFormationController y)
+            {
+                float xDistance = (startPos - x.GetMiddlePos()).sqrMagnitude;
+                float yDistance = (startPos - y.GetMiddlePos()).sqrMagnitude;
+                if (xDistance > yDistance)
+                {
+                    return 1;
+                }
+                else if (xDistance < yDistance)
+                {
+                    return -1;
+                }
+                else
+                {
+                    return 0;
+                }
+            }
 
             OnEndMouseSelect?.Invoke(selectedControllerList);
         }

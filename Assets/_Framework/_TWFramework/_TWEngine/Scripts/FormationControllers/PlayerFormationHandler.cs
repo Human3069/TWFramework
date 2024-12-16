@@ -10,8 +10,7 @@ namespace _TW_Framework
         private const string LOG_FORMAT = "<color=white><b>[PlayerFormationHandler]</b></color> {0}";
 
         [Header("=== PlayerFormationHandler ===")]
-        [SerializeField]
-        protected MouseEventHandler mouseEventHandler;
+        public MouseEventHandler MouseEventHandler;
         [SerializeField]
         protected UI_FormationController uiController;
 
@@ -23,12 +22,12 @@ namespace _TW_Framework
 
         protected virtual void Awake()
         {
-            mouseEventHandler.OnEndMouseSelect += OnEndMouseSelect;
+            MouseEventHandler.OnEndMouseSelect += OnEndMouseSelect;
         }
 
         protected virtual void OnDestroy()
         {
-            mouseEventHandler.OnEndMouseSelect -= OnEndMouseSelect;
+            MouseEventHandler.OnEndMouseSelect -= OnEndMouseSelect;
         }
 
         public override void Initialize(UnitInfo[] unitInfos, Vector3[] startPoints, float unitDistance, float facingAngle)
@@ -39,7 +38,7 @@ namespace _TW_Framework
                 controllerObj.transform.SetParent(this.transform);
 
                 PlayerFormationController controller = controllerObj.AddComponent<PlayerFormationController>();
-                controller.Initialize(unitInfos[i], startPoints[i], unitDistance, i, facingAngle, mouseEventHandler);
+                controller.Initialize(unitInfos[i], startPoints[i], unitDistance, i, facingAngle, MouseEventHandler);
 
                 allControllerList.Add(controller);
             }
@@ -55,6 +54,11 @@ namespace _TW_Framework
             }
 
             base.OnAllUnitsDead(controller);
+        }
+
+        public List<PlayerFormationController> GetAllControllerList()
+        {
+            return allControllerList.ConvertAll(x => x as PlayerFormationController);
         }
 
         public List<PlayerFormationController> GetSelectedControllerList()

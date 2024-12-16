@@ -20,7 +20,12 @@ MonoBehaviour:
   _WeaponInfo: {fileID: 11400000, guid: 81cc3f4d924729d40929881a0c400009, type: 2}
   _FormationType: 1
   UnitCount: 100
-  UnitSpacing: 2
-  NoiseAmount: 0.15
   UnitPrefab: {fileID: 8091776970705940152, guid: 63b4bb0ca6f054c4e87b2d0648759458, type: 3}
   SilhouettePrefab: {fileID: 8091776970705940152, guid: c18732876bf676747b9bfe9a29355c77, type: 3}
+  FormationTypeDic:
+    _serializedList:
+    - Key: 1
+      Value:
+        UnitSpacing: 2
+        NoiseAmount: 0.15
+  IconSprite: {fileID: 21300000, guid: 265ef5ae073b8d34d8e38a7ff24a8eab, type: 3}

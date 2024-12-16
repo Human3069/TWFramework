@@ -115,7 +115,7 @@ namespace _TW_Framework
                             GameObject _obj = Instantiate(_unitPrefab, transform.position, Quaternion.identity);
                             UnitHandler _unit = _obj.GetComponent<UnitHandler>();
 
-                            _unit.Initialize(this, _teamType, _unitInfo);
+                            _unit.Initialize(this, _teamType, _UnitInfo);
 
                             _obj.transform.parent = this.transform;
 
@@ -299,6 +299,11 @@ namespace _TW_Framework
             }
         }
 
+        [HideInInspector]
+        public FormationType CurrentFormationType = FormationType.Rectangle;
+
+        public Action OnUnitFormationChanged;
+
         [ReadOnly]
         [SerializeField]
         protected Vector3 lineStartPos;
@@ -306,23 +311,26 @@ namespace _TW_Framework
         [SerializeField]
         protected Vector3 lineEndPos;
 
-        protected float currentFacingAngle;
+        [HideInInspector]
+        public float CurrentFacingAngle;
+        [HideInInspector]
         public int SelectedIndex = -1;
 
-        protected UnitInfo _unitInfo;
+        [HideInInspector]
+        public UnitInfo _UnitInfo;
 
         public void Initialize(UnitInfo unitInfo, Vector3 startPoint, float unitDistance, int selectedIndex, float facingAngle)
         {
-            _unitInfo = unitInfo;
-            _unitPrefab = _unitInfo.UnitPrefab;
+            _UnitInfo = unitInfo;
+            _unitPrefab = _UnitInfo.UnitPrefab;
 
-            for (int i = 0; i < _unitInfo.UnitCount; i++)
+            for (int i = 0; i < _UnitInfo.UnitCount; i++)
             {
-                GameObject unitObj = Instantiate(_unitInfo.UnitPrefab);
+                GameObject unitObj = Instantiate(_UnitInfo.UnitPrefab);
                 unitObj.transform.SetParent(this.transform);
 
                 UnitHandler unit = unitObj.GetComponent<UnitHandler>();
-                unit.Initialize(this, _teamType, _unitInfo);
+                unit.Initialize(this, _teamType, _UnitInfo);
 
                 UnitHandlerList.Add(unit);
             }
@@ -330,9 +338,9 @@ namespace _TW_Framework
             lineStartPos = startPoint + (Vector3.left * unitDistance / 2f);
             lineEndPos = startPoint + (Vector3.right * unitDistance / 2f);
 
-            this._unitCount = _unitInfo.UnitCount;
-            this._unitSpacing = _unitInfo.UnitSpacing;
-            this._noiseAmount = _unitInfo.NoiseAmount;
+            this._unitCount = _UnitInfo.UnitCount;
+            this._unitSpacing = _UnitInfo.GetPairValue(FormationType.Rectangle).UnitSpacing;
+            this._noiseAmount = _UnitInfo.GetPairValue(FormationType.Rectangle).NoiseAmount;
 
             float _unitsPerRowUnclamped = unitDistance / UnitSpacing;
             int _unitsPerRow = (int)(unitDistance / UnitSpacing);
@@ -409,11 +417,11 @@ namespace _TW_Framework
                         if (movingUnitDistance > yieldedToStartDistance &&
                             movingUnitDistance > yieldedToEndDistance)
                         {
-                            nearestUnit.SetTargetDestination(movingUnitList[i].TargetPos, currentFacingAngle);
+                            nearestUnit.SetTargetDestination(movingUnitList[i].TargetPos, CurrentFacingAngle);
                             nearestUnit.IsYielding = true;
                             DrawYieldedStartAndDestGizmoRoutine(new KeyValuePair<Vector3, Vector3>(movingUnitList[i].TargetPos, nearestUnit.transform.position)).Forget();
 
-                            movingUnitList[i].SetTargetDestination(yieldedPos, currentFacingAngle);
+                            movingUnitList[i].SetTargetDestination(yieldedPos, CurrentFacingAngle);
                             movingUnitList[i].IsYielding = true;
                             DrawYieldedStartAndDestGizmoRoutine(new KeyValuePair<Vector3, Vector3>(yieldedPos, movingUnitList[i].transform.position)).Forget();
                         }
@@ -450,7 +458,7 @@ namespace _TW_Framework
             if (_length > MAX_FORMABLE_THRESHOLD)
             {
                 facingAngle = Mathf.Atan2(leftDirection.x, leftDirection.z) * Mathf.Rad2Deg;
-                float facingAngleDiff = Mathf.Abs(facingAngle - currentFacingAngle);
+                float facingAngleDiff = Mathf.Abs(facingAngle - CurrentFacingAngle);
 
                 posList = FormationPositionerEx.GetAlignedPositionList(UnitHandlerList.Count, CurrentFormation, middlePos, facingAngle);
 
@@ -472,7 +480,7 @@ namespace _TW_Framework
                 }
 
                 (posList, facingAngle) = FormationPositionerEx.GetPositionListAndAngle(currentPosList, CurrentFormation, lineStartPos);
-                float facingAngleDiff = Mathf.Abs(facingAngle - currentFacingAngle);
+                float facingAngleDiff = Mathf.Abs(facingAngle - CurrentFacingAngle);
 
                 if (facingAngleDiff < _MAX_FORMABLE_ANGLE || facingAngleDiff > (360 - _MAX_FORMABLE_ANGLE))
                 {
@@ -488,38 +496,52 @@ namespace _TW_Framework
                 }
             }
 
-            currentFacingAngle = facingAngle;
+            CurrentFacingAngle = facingAngle;
 
             UniTaskEx.Cancel(this, 0);
             YieldPositionRoutine().Forget();
         }
 
-        public void ChangeUnitFormation(IFormation formationType)
+        public void ChangeUnitFormation(FormationType type)
         {
-            if (formationType is RectangleFormation rectangleFormation)
+            CurrentFormationType = type;
+            _unitSpacing = _UnitInfo.GetPairValue(type).UnitSpacing;
+            _noiseAmount = _UnitInfo.GetPairValue(type).NoiseAmount;
+
+            if (type == FormationType.Rectangle)
             {
-                CurrentFormation = rectangleFormation;
+                CurrentFormation = new RectangleFormation(this);
             }
-            else if (formationType is CircleFormation circleFormation)
+            else if (type == FormationType.Skirmish)
             {
-                CurrentFormation = circleFormation;
+                CurrentFormation = new RectangleFormation(this);
             }
-            else if (formationType is LineFormation lineFormation)
+            else if (type == FormationType.Square)
             {
-                CurrentFormation = lineFormation;
+                CurrentFormation = new SquareFormation(this);
             }
-            else if (formationType is TriangleFormation triangleFormation)
+            else if (type == FormationType.Circle)
             {
-                CurrentFormation = triangleFormation;
+                CurrentFormation = new CircleFormation(this);
             }
-            else if (formationType is ConeFormation coneFormation)
+            else if (type == FormationType.Line)
             {
-                CurrentFormation = coneFormation;
+                CurrentFormation = new LineFormation(this);
+            }
+            else if (type == FormationType.Triangle)
+            {
+                CurrentFormation = new TriangleFormation(this);
+            }
+            else if (type == FormationType.Cone)
+            {
+                CurrentFormation = new ConeFormation(this);
             }
             else
             {
                 Debug.Assert(false);
             }
+
+            OnUnitFormationChanged?.Invoke();
         }
 
         protected void ReinstantiateFormation()

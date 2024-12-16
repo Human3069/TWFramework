@@ -6,22 +6,31 @@ namespace _TW_Framework
     public class BulletHandler : MonoBehaviour
     {
         protected Rigidbody _rigidbody;
-        protected TeamType _teamType;
-
+   
+        [Header("=== BulletHandler ===")]
+        [SerializeField]
+        protected PoolerType poolerType;
         [SerializeField]
         protected float speed = 100f;
         [SerializeField]
         protected float lifeTime = 3f;
 
         protected Vector3 currentPos = Vector3.zero;
+
+        [Space(10)]
+        [ReadOnly]
+        [SerializeField]
+        protected TeamType _teamType;
+        [ReadOnly]
+        [SerializeField]
         protected float _damage = 0f;
 
-        protected void Awake()
+        protected virtual void Awake()
         {
             _rigidbody = this.GetComponent<Rigidbody>();
         }
 
-        public void Initialize(TeamType type, float damage)
+        public virtual void Initialize(TeamType type, float damage)
         {
             _teamType = type;
             _damage = damage;
@@ -29,7 +38,7 @@ namespace _TW_Framework
             currentPos = Vector3.zero;
         }
 
-        protected void OnEnable()
+        protected virtual void OnEnable()
         {
             _rigidbody.linearVelocity = this.transform.forward * speed;
 
@@ -37,17 +46,17 @@ namespace _TW_Framework
             CheckRaycastAsync().Forget();
         }
 
-        protected async UniTaskVoid CheckLifetimeAsync()
+        protected virtual async UniTaskVoid CheckLifetimeAsync()
         {
             await UniTask.WaitForSeconds(lifeTime);
 
             if (this.gameObject.activeSelf == true)
             {
-                this.gameObject.ReturnPool(PoolerType.MusketBullet);
+                this.gameObject.ReturnPool(poolerType);
             }
         }
 
-        protected async UniTaskVoid CheckRaycastAsync()
+        protected virtual async UniTaskVoid CheckRaycastAsync()
         {
             while (this.enabled == true)
             {
@@ -65,7 +74,7 @@ namespace _TW_Framework
 
                             if (this.gameObject.activeSelf == true)
                             {
-                                this.gameObject.ReturnPool(PoolerType.MusketBullet);
+                                this.gameObject.ReturnPool(poolerType);
                             }
                         }
                     }
@@ -73,7 +82,21 @@ namespace _TW_Framework
                     {
                         if (hit.collider.gameObject.isStatic == true)
                         {
-                            PoolerType.Hit_Dirt.EnablePool(OnBeforeEnablePool);
+                            PoolerType hitPoolerType;
+                            if (poolerType == PoolerType.MusketBullet)
+                            {
+                                hitPoolerType = PoolerType.Musket_HitDirt;
+                            }
+                            else if (poolerType == PoolerType.CannonBall)
+                            {
+                                hitPoolerType = PoolerType.Cannon_HitDirt;
+                            }
+                            else
+                            {
+                                throw new System.NotImplementedException();
+                            }
+
+                            hitPoolerType.EnablePool(OnBeforeEnablePool);
                             void OnBeforeEnablePool(GameObject obj)
                             {
                                 obj.transform.position = hit.point;
@@ -82,15 +105,15 @@ namespace _TW_Framework
                                 PostOnPoolEnabled().Forget();
                                 async UniTaskVoid PostOnPoolEnabled()
                                 {
-                                    await UniTask.WaitForSeconds(10, cancellationToken : obj.GetCancellationTokenOnDestroy());
-                                    obj.ReturnPool(PoolerType.Hit_Dirt);
+                                    await UniTask.WaitForSeconds(10, cancellationToken: obj.GetCancellationTokenOnDestroy());
+                                    obj.ReturnPool(hitPoolerType);
                                 }
                             }
-                        }
 
-                        if (this.gameObject.activeSelf == true)
-                        {
-                            this.gameObject.ReturnPool(PoolerType.MusketBullet);
+                            if (this.gameObject.activeSelf == true)
+                            {
+                                this.gameObject.ReturnPool(poolerType);
+                            }
                         }
                     }
                 }

@@ -8,8 +8,10 @@ namespace _TW_Framework
     public enum PoolerType
     {
         MusketBullet,
-        
-        Hit_Dirt,
+        CannonBall,
+
+        Musket_HitDirt,
+        Cannon_HitDirt,
     }
 
     public class ObjectPoolManager : BaseSingleton<ObjectPoolManager>

@@ -11,22 +11,22 @@ namespace _TW_Framework
         [ReadOnly]
         [SerializeField]
         public Vector2 selectedNormalRange = new Vector2(-1f, -1f);
-
+     
         public Action OnSelectedAction;
         public Action OnDeselectedAction;
 
         protected MouseEventHandler _mouseEventHandler;
-
+        
         public void Initialize(UnitInfo unitInfo, Vector3 startPoint, float unitDistance, int selectedIndex, float facingAngle, MouseEventHandler mouseEventHandler)
         {
-            _unitInfo = unitInfo;
+            _UnitInfo = unitInfo;
             for (int i = 0; i < unitInfo.UnitCount; i++)
             {
                 GameObject unitObj = Instantiate(unitInfo.UnitPrefab);
                 unitObj.transform.SetParent(this.transform);
 
                 UnitHandler unit = unitObj.GetComponent<UnitHandler>();
-                unit.Initialize(this, _teamType, _unitInfo);
+                unit.Initialize(this, _teamType, _UnitInfo);
 
                 UnitHandlerList.Add(unit);
             }
@@ -35,8 +35,8 @@ namespace _TW_Framework
             lineEndPos = startPoint + (Vector3.right * unitDistance / 2f);
 
             this._unitCount = unitInfo.UnitCount;
-            this._unitSpacing = unitInfo.UnitSpacing;
-            this._noiseAmount = unitInfo.NoiseAmount;
+            this._unitSpacing = _UnitInfo.GetPairValue(FormationType.Rectangle).UnitSpacing;
+            this._noiseAmount = _UnitInfo.GetPairValue(FormationType.Rectangle).NoiseAmount;
 
             float _unitsPerRowUnclamped = unitDistance / UnitSpacing;
             int _unitsPerRow = (int)(unitDistance / UnitSpacing);
@@ -61,6 +61,14 @@ namespace _TW_Framework
 
             SilhouetteController silhouetteController = silhouetteControllerObj.AddComponent<SilhouetteController>();
             silhouetteController.Initialize(this, mouseEventHandler, unitInfo.SilhouettePrefab, posList, facingAngle);
+        }
+
+        public (Vector3, Vector3) GetControlPoints()
+        {
+            Vector3 controlStartPos = Vector3.Lerp(lineStartPos, lineEndPos, selectedNormalRange.x);
+            Vector3 controlEndPos = Vector3.Lerp(lineStartPos, lineEndPos, selectedNormalRange.y);
+
+            return (controlStartPos, controlEndPos);
         }
 
         public (Vector3, Vector3) GetControlPoints(Vector3 lineStartPos, Vector3 lineEndPos)
@@ -115,6 +123,10 @@ namespace _TW_Framework
             _mouseEventHandler.OnEndHandling += OnEndHandling;
             _mouseEventHandler.OnClickEnemyHandler += OnClickEnemyHandler;
 
+            foreach (UnitHandler unit in UnitHandlerList)
+            {
+                unit.OnSelected();
+            }
             OnSelectedAction?.Invoke();
         }
 
@@ -131,6 +143,10 @@ namespace _TW_Framework
             _mouseEventHandler.OnEndHandling -= OnEndHandling;
             _mouseEventHandler.OnDuringHandling -= OnDuringHandling;
 
+            foreach (UnitHandler unit in UnitHandlerList)
+            {
+                unit.OnDeselected();
+            }
             OnDeselectedAction?.Invoke();
         }
     }
