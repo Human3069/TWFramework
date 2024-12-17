@@ -3,6 +3,12 @@ using UnityEngine;
 
 namespace _TW_Framework
 {
+    public enum DieType
+    {
+        Animated,
+        Physical
+    }
+
     public class BulletHandler : MonoBehaviour
     {
         protected Rigidbody _rigidbody;
@@ -67,10 +73,10 @@ namespace _TW_Framework
                 {
                     if (hit.collider.TryGetComponent<UnitHandler>(out UnitHandler hitHandler) == true)
                     {
-                        if (this._teamType != hitHandler._TeamType)
+                        if (this._teamType != hitHandler._TeamType && hitHandler.IsDead == false)
                         {
                             IDamageable damageable = hitHandler as IDamageable;
-                            damageable.TakeDamage(_damage);
+                            damageable.TakeDamage(_damage, DieType.Animated);
 
                             if (this.gameObject.activeSelf == true)
                             {

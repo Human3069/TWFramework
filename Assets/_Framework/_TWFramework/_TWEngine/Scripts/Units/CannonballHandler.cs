@@ -1,4 +1,5 @@
 using Cysharp.Threading.Tasks;
+using Unity.VisualScripting;
 using UnityEngine;
 
 namespace _TW_Framework
@@ -28,10 +29,19 @@ namespace _TW_Framework
                 {
                     if (hit.collider.TryGetComponent<UnitHandler>(out UnitHandler hitHandler) == true)
                     {
-                        if (this._teamType != hitHandler._TeamType)
+                        if (this._teamType != hitHandler._TeamType &&
+                            hitHandler.IsDead == false)
                         {
                             IDamageable damageable = hitHandler as IDamageable;
-                            damageable.TakeDamage(_damage);
+                            damageable.TakeDamage(_damage, DieType.Physical);
+
+                            hit.collider.isTrigger = false;
+
+                            float currentPower = _rigidbody.linearVelocity.magnitude / 10f;
+                            currentPower = Mathf.Lerp(0f, currentPower, Random.Range(0.25f, 1f));
+
+                            Rigidbody hitRigidbody = hitHandler.AddComponent<Rigidbody>();
+                            hitRigidbody.AddForce(this.transform.forward * currentPower, ForceMode.Impulse);
                         }
                     }
                     else

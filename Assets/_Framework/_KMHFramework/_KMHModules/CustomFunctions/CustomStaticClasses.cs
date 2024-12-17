@@ -61,9 +61,9 @@ namespace _KMH_Framework
             return startPoint + _lineDirection * _projectLength;
         }
 
-        public static Vector3 GetPredictPosition(Vector3 myPos, Vector3 targetPos, Vector3 targetVelocity, float projectileSpeed)
+        public static Vector3 GetPredictPosition(Vector3 startPos, Vector3 targetPos, Vector3 targetVelocity, float projectileSpeed)
         {
-            float _magnitude = (targetPos - myPos).magnitude;
+            float _magnitude = (targetPos - startPos).magnitude;
             Vector3 targetPredict = targetPos + (targetVelocity * _magnitude / projectileSpeed);
 
             return targetPredict;
@@ -221,7 +221,7 @@ namespace _KMH_Framework
 
     // UI 기본적인 요구사항 중 Tab 누르면 다음 Selectable로 전환되는 요구가 많습니다.
     // 그걸 구현하려고 만든것입니다.
-    public class SelectionCircularList : IDisposable
+    public class SelectionCircularList
     {
         // 기본적으로 Unity C# 에서는 순환 LinkedList를 지원하지 않음. 따라서 별도로 지정해야 합니다.
         private LinkedList<Selectable> selectableLinkedList = new LinkedList<Selectable>();
@@ -307,11 +307,6 @@ namespace _KMH_Framework
             {
                 return false;
             }
-        }
-
-        public void Dispose()
-        {
-            selectableLinkedList.Clear();
         }
     }
 }

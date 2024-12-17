@@ -19,7 +19,7 @@ MonoBehaviour:
   MeleeRange: 2
   _WeaponInfo: {fileID: 11400000, guid: bfd2a9a8b6c362d44b64e8f9accd11b7, type: 2}
   _FormationType: 1
-  UnitCount: 4
+  UnitCount: 16
   UnitPrefab: {fileID: 8091776970705940152, guid: fbdce9ed935ecab4f9a5b09fceff57f4, type: 3}
   SilhouettePrefab: {fileID: 8091776970705940152, guid: c18732876bf676747b9bfe9a29355c77, type: 3}
   FormationTypeDic:

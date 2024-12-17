@@ -131,7 +131,7 @@ namespace _TW_Framework
                             GameObject _obj = UnitHandlerList[i].gameObject;
                             UnitHandlerList.RemoveAt(i);
 
-                            Destroy(_obj);
+                            // Destroy(_obj);
                         }
                     }
 
@@ -146,7 +146,7 @@ namespace _TW_Framework
         public void RemoveUnit(UnitHandler unitHandler)
         {
             UnitHandlerList.Remove(unitHandler);
-            Destroy(unitHandler.gameObject);
+            // Destroy(unitHandler.gameObject);
 
             UnitCount = UnitHandlerList.Count;
             ApplyCurrentUnitFormation();
@@ -166,7 +166,7 @@ namespace _TW_Framework
                     throw new NotImplementedException("");
                 }
 
-                Destroy(this.gameObject);
+                // Destroy(this.gameObject);
             }
         }
 

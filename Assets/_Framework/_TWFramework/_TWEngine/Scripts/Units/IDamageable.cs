@@ -10,7 +10,7 @@ namespace _TW_Framework
             set;
         }
 
-        void TakeDamage(float damage)
+        void TakeDamage(float damage, DieType dieType)
         {
             CurrentHealth -= damage;
 
@@ -20,12 +20,12 @@ namespace _TW_Framework
             }
             else
             {
-                OnDead();
+                OnDead(dieType);
             }
         }
 
         void OnDamaged();
 
-        void OnDead();
+        void OnDead(DieType dieType);
     }
 }

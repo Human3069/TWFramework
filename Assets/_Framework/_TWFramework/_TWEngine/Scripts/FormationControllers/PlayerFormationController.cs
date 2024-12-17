@@ -65,10 +65,7 @@ namespace _TW_Framework
 
         public (Vector3, Vector3) GetControlPoints()
         {
-            Vector3 controlStartPos = Vector3.Lerp(lineStartPos, lineEndPos, selectedNormalRange.x);
-            Vector3 controlEndPos = Vector3.Lerp(lineStartPos, lineEndPos, selectedNormalRange.y);
-
-            return (controlStartPos, controlEndPos);
+            return (lineStartPos, lineEndPos);
         }
 
         public (Vector3, Vector3) GetControlPoints(Vector3 lineStartPos, Vector3 lineEndPos)

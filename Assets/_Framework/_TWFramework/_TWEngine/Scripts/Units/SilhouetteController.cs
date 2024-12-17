@@ -111,17 +111,17 @@ namespace _TW_Framework
         {
             Debug.Log("reints");
 
-            // (Vector3 startPos, Vector3 endPos) = _controller.GetControlPoints();
-            // Vector3 middlePos = Vector3.Lerp(startPos, endPos, 0.5f);
-            // 
-            // float facingAngle = _controller.CurrentFacingAngle;
-            // List<Vector3> posList = FormationPositionerEx.GetAlignedPositionList(silhouetteObjList.Count, _controller.CurrentFormation, middlePos, facingAngle);
-            // 
-            // for (int i = 0; i < silhouetteObjList.Count; i++)
-            // {
-            //     silhouetteObjList[i].transform.position = posList[i];
-            //     silhouetteObjList[i].transform.eulerAngles = new Vector3(0f, facingAngle, 0f);
-            // }
+            (Vector3 startPos, Vector3 endPos) = _controller.GetControlPoints();
+            Vector3 middlePos = Vector3.Lerp(startPos, endPos, 0.5f);
+            
+            float facingAngle = _controller.CurrentFacingAngle;
+            List<Vector3> posList = FormationPositionerEx.GetAlignedPositionList(silhouetteObjList.Count, _controller.CurrentFormation, middlePos, facingAngle);
+            
+            for (int i = 0; i < silhouetteObjList.Count; i++)
+            {
+                silhouetteObjList[i].transform.position = posList[i];
+                silhouetteObjList[i].transform.eulerAngles = new Vector3(0f, facingAngle, 0f);
+            }
         }
 
         protected void OnStartHandling(Vector3 lineStartPos, Vector3 lineEndPos)

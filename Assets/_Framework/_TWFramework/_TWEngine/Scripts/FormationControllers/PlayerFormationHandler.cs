@@ -1,4 +1,3 @@
-using _KMH_Framework;
 using System;
 using System.Collections.Generic;
 using UnityEngine;
@@ -43,7 +42,7 @@ namespace _TW_Framework
                 allControllerList.Add(controller);
             }
 
-            uiController.Initialize(unitInfos);
+            uiController.Initialize(unitInfos, allControllerList);
         }
 
         public override void OnAllUnitsDead(BaseFormationController controller)

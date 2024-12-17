@@ -30,7 +30,7 @@ namespace _TW_Framework
 
         [Space(10)]
         [SerializeField]
-        protected GameObject buttonPrefab;
+        protected UI_Card cardPrefab;
         [SerializeField]
         protected Transform cardParent;
 
@@ -57,18 +57,17 @@ namespace _TW_Framework
             skirmishFormationToggle.onValueChanged.AddListener(OnValueChangedSkirmishFormationToggle);
         }
 
-        public void Initialize(UnitInfo[] unitInfos)
+        public void Initialize(UnitInfo[] unitInfos, List<BaseFormationController> controllerList)
         {
             for (int i = 0; i < unitInfos.Length; i++)
             {
                 int localIndex = i;
 
-                GameObject buttonObj = Instantiate(buttonPrefab, cardParent);
-                Button button = buttonObj.GetComponent<Button>();
-                button.onClick.AddListener(() => OnClickCardButton(localIndex));
+                UI_Card cardInstance = Instantiate(cardPrefab, cardParent);
+                cardInstance.SelectButton.onClick.AddListener(() => OnClickCardButton(localIndex));
 
-                cardButtonList.Add(button);
-                button.transform.GetChild(0).GetComponent<Image>().sprite = unitInfos[i].IconSprite;
+                cardButtonList.Add(cardInstance.SelectButton);
+                cardInstance.Initialize(unitInfos[i], controllerList[i]);
             }
         }
 

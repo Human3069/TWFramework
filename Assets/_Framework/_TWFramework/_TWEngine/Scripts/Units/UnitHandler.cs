@@ -15,6 +15,12 @@ namespace _TW_Framework
         Dead
     }
 
+    public enum UnitCategory
+    {
+        Infantry,
+        Cavalry,
+    }
+
     [RequireComponent(typeof(Animation))]
     [RequireComponent(typeof(NavMeshAgent))]
     public class UnitHandler : MonoBehaviour, IDamageable
@@ -51,6 +57,9 @@ namespace _TW_Framework
                 }
             }
         }
+
+        [SerializeField]
+        protected UnitCategory unitCategory;
 
         public Action<UnitState> OnStateChanged;
 
@@ -162,6 +171,7 @@ namespace _TW_Framework
                 {
                     return this.transform != null &&
                            this.gameObject != null &&
+                           this.isInitialized == true &&
                             _animation != null &&
                            _agent != null &&
                            IsDead == false &&
@@ -173,6 +183,8 @@ namespace _TW_Framework
                 }
             }
         }
+
+        protected bool isInitialized = false;
 
         protected void Awake()
         {
@@ -198,12 +210,13 @@ namespace _TW_Framework
             this._TeamType = teamType;
 
             meleeAttack.Initialize(this, unitInfo.MeleeDamage, unitInfo.MeleeSpeed, unitInfo.MeleeRange);
-            meleeAttack.SeekToMeleeAttackAsync().Forget();
-
             rangedAttack.Initialize(this, unitInfo._WeaponInfo);
 
             maxHealth = unitInfo.MaxHealth;
             CurrentHealth = maxHealth;
+
+            meleeAttack.SeekToMeleeAttackAsync().Forget();
+            isInitialized = true;
         }
 
         public void OnSelected()
@@ -254,15 +267,23 @@ namespace _TW_Framework
             facingAngle = newFacingAngle;
         }
 
-        void IDamageable.OnDead()
+        void IDamageable.OnDead(DieType dieType)
         {
-            if (IsDead == false)
+            if (IsValid == true)
             {
                 Controller.RemoveUnit(this);
             }
             IsDead = true;
 
-            Debug.Log("dead");
+            _agent.enabled = false;
+            _audioSource.enabled = false;
+            _outlinable.enabled = false;
+            this.enabled = false;
+
+            if (dieType == DieType.Animated)
+            {
+                _animation.PlayQueued(unitCategory + "_DefaultDead");
+            }
         }
 
         void IDamageable.OnDamaged()
@@ -315,7 +336,8 @@ namespace _TW_Framework
                             if (overlappedCollider.TryGetComponent<UnitHandler>(out UnitHandler unitHandler) == true)
                             {
                                 if (unitHandler._TeamType != _unitHandler._TeamType &&
-                                    (unitHandler.transform.position - _unitHandler.transform.position).magnitude <= meleeAttackRange)
+                                   (unitHandler.transform.position - _unitHandler.transform.position).magnitude <= meleeAttackRange &&
+                                    unitHandler.IsValid == true)
                                 {
                                     MeleeAttackingUnit = unitHandler;
                                     MeleeAttackAsync().Forget();
@@ -338,13 +360,13 @@ namespace _TW_Framework
 
             protected async UniTask MeleeAttackAsync()
             {
-                while (MeleeAttackingUnit != null && _unitHandler.IsDead == false)
+                while (MeleeAttackingUnit.IsValid == true && _unitHandler.IsValid == true)
                 {
                     _unitHandler._UnitState = UnitState.MeleeAttacking;
                     _unitHandler.PlayAnimation("MeleeAttack");
 
                     IDamageable damageable = MeleeAttackingUnit;
-                    damageable.TakeDamage(meleeAttackDamage);
+                    damageable.TakeDamage(meleeAttackDamage, DieType.Animated);
 
                     await UniTaskEx.WaitForSeconds(_unitHandler, 1, UnityEngine.Random.Range(meleeAttackSpeed - 0.5f, meleeAttackSpeed + 0.5f));
                 }
@@ -434,7 +456,7 @@ namespace _TW_Framework
 
             public async UniTask SeekToRangedAttackAsync()
             {
-                while (RangedAttackingUnit == null && _unitHandler.IsDead == false && _unitHandler._UnitState == UnitState.Idle && currentAmmoCount > 0)
+                while (RangedAttackingUnit == null && _unitHandler.IsValid == true && _unitHandler._UnitState == UnitState.Idle && currentAmmoCount > 0)
                 {
                     Collider[] overlappedColliders = Physics.OverlapSphere(_unitHandler.transform.position, rangedAttackRange);
                     foreach (Collider overlappedCollider in overlappedColliders)

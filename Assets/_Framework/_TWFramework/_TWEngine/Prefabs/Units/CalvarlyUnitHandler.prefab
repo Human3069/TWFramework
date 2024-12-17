@@ -112,7 +112,7 @@ GameObject:
   - component: {fileID: 8422487281092648228}
   - component: {fileID: 4666303799242821744}
   m_Layer: 0
-  m_Name: Capsule
+  m_Name: Horse
   m_TagString: Untagged
   m_Icon: {fileID: 0}
   m_NavMeshLayer: 0
@@ -127,7 +127,7 @@ Transform:
   m_GameObject: {fileID: 7772290727964918314}
   serializedVersion: 2
   m_LocalRotation: {x: 0.7071068, y: 0, z: 0, w: 0.7071068}
-  m_LocalPosition: {x: 0, y: 0.5, z: 0}
+  m_LocalPosition: {x: 0, y: 1, z: 0}
   m_LocalScale: {x: 2, y: 2, z: 1}
   m_ConstrainProportionsScale: 0
   m_Children: []
@@ -231,7 +231,7 @@ Transform:
   m_ConstrainProportionsScale: 0
   m_Children: []
   m_Father: {fileID: 6580267362343329352}
-  m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
+  m_LocalEulerAnglesHint: {x: 90, y: 0, z: -0.926}
 --- !u!33 &8091776970580583884
 MeshFilter:
   m_ObjectHideFlags: 0
@@ -349,6 +349,7 @@ MonoBehaviour:
   Controller: {fileID: 0}
   _TeamType: 0
   _unitState: 0
+  unitCategory: 1
   maxHealth: 100
   _currentHealth: 0
   muzzleFlash: {fileID: 0}
@@ -363,6 +364,7 @@ MonoBehaviour:
     meleeAttackRange: 2
   rangedAttack:
     RangedAttackingUnit: {fileID: 0}
+    _PoolerType: 0
     rangedAttackDamage: 50
     rangedAttackSpeed: 15
     reloadingRemained: 0
@@ -427,6 +429,7 @@ Animation:
   m_Animations:
   - {fileID: 7400000, guid: 1eefe53a0d35f79469312af3e12c8a69, type: 2}
   - {fileID: 7400000, guid: e4d24aa3d1f026948a2982d998462dd5, type: 2}
+  - {fileID: 7400000, guid: b540a48b630e5c840aa602a16c2c3ae7, type: 2}
   m_WrapMode: 0
   m_PlayAutomatically: 0
   m_AnimatePhysics: 0
