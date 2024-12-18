@@ -1,20 +1,13 @@
 ﻿using Cysharp.Threading.Tasks;
+using Cysharp.Threading.Tasks.Triggers;
 using EPOOutline;
 using System;
+using Unity.VisualScripting;
 using UnityEngine;
 using UnityEngine.AI;
 
 namespace _TW_Framework
 {
-    public enum UnitState
-    {
-        Idle,
-        Moving,
-        MeleeAttacking,
-        RangedAttacking,
-        Dead
-    }
-
     public enum UnitCategory
     {
         Infantry,
@@ -23,45 +16,22 @@ namespace _TW_Framework
 
     [RequireComponent(typeof(Animation))]
     [RequireComponent(typeof(NavMeshAgent))]
+    [RequireComponent(typeof(Collider))]
     public class UnitHandler : MonoBehaviour, IDamageable
     {
         protected Animation _animation;
         protected NavMeshAgent _agent;
         protected AudioSource _audioSource;
         protected Outlinable _outlinable;
+        protected Collider[] colliders;
 
         [HideInInspector]
         public BaseFormationController Controller;
         [HideInInspector]
         public TeamType _TeamType;
 
-        [ReadOnly]
-        [SerializeField]
-        protected UnitState _unitState = UnitState.Idle;
-        public UnitState _UnitState
-        {
-            get
-            {
-                return _unitState;
-            }
-            set
-            {
-                if (_unitState != value)
-                {
-                    _unitState = value;
-
-                    if (OnStateChanged != null)
-                    {
-                        OnStateChanged.Invoke(value);
-                    }
-                }
-            }
-        }
-
         [SerializeField]
         protected UnitCategory unitCategory;
-
-        public Action<UnitState> OnStateChanged;
 
         [Header("=== IDamageable ===")]
         [ReadOnly]
@@ -123,12 +93,11 @@ namespace _TW_Framework
                     if (value == true)
                     {
                         IsYielding = false;
-                        _UnitState = UnitState.Idle;
+                        // _UnitState = UnitState.Idle;
                     }
                     else
                     {
-                        _UnitState = UnitState.Moving;
-                        UniTaskEx.Cancel(this, 0);
+                        // _UnitState = UnitState.Moving;
                     }
                 }
             }
@@ -192,12 +161,11 @@ namespace _TW_Framework
             _agent = this.GetComponent<NavMeshAgent>();
             _audioSource = this.GetComponent<AudioSource>();
             _outlinable = this.GetComponent<Outlinable>();
+            colliders = this.GetComponents<Collider>();
         }
 
         protected void OnDestroy()
         {
-            UniTaskEx.Cancel(this, 0);
-
             meleeAttack = null;
             rangedAttack = null;
         }
@@ -209,14 +177,13 @@ namespace _TW_Framework
             this.Controller = controller;
             this._TeamType = teamType;
 
-            meleeAttack.Initialize(this, unitInfo.MeleeDamage, unitInfo.MeleeSpeed, unitInfo.MeleeRange);
-            rangedAttack.Initialize(this, unitInfo._WeaponInfo);
-
             maxHealth = unitInfo.MaxHealth;
             CurrentHealth = maxHealth;
 
-            meleeAttack.SeekToMeleeAttackAsync().Forget();
             isInitialized = true;
+
+            meleeAttack.Initialize(this, unitInfo.MeleeDamage, unitInfo.MeleeSpeed, unitInfo.MeleeRange);
+            rangedAttack.Initialize(this, unitInfo._WeaponInfo);
         }
 
         public void OnSelected()
@@ -267,22 +234,46 @@ namespace _TW_Framework
             facingAngle = newFacingAngle;
         }
 
-        void IDamageable.OnDead(DieType dieType)
+        void IDamageable.OnDead(DieType dieType, Vector3 thrownPower)
         {
-            if (IsValid == true)
-            {
-                Controller.RemoveUnit(this);
-            }
+            Controller.RemoveUnit(this);
             IsDead = true;
 
             _agent.enabled = false;
             _audioSource.enabled = false;
-            _outlinable.enabled = false;
+            Destroy(_outlinable);
             this.enabled = false;
 
             if (dieType == DieType.Animated)
             {
                 _animation.PlayQueued(unitCategory + "_DefaultDead");
+                foreach (Collider collider in colliders)
+                {
+                    collider.enabled = false;
+                }
+            }
+            else if (dieType == DieType.Physical)
+            {
+                foreach (Collider collider in colliders)
+                {
+                    collider.isTrigger = false;
+                }
+
+                Rigidbody _rigidbody = this.AddComponent<Rigidbody>();
+                _rigidbody.AddForce(thrownPower, ForceMode.Impulse);
+                PostDeadPhysicallyAsync(_rigidbody).Forget();
+            }
+        }
+
+        protected async UniTaskVoid PostDeadPhysicallyAsync(Rigidbody _rigidbody)
+        {
+            await UniTask.WaitForSeconds(0.1f);
+            await UniTask.WaitWhile(() => _rigidbody.linearVelocity.sqrMagnitude > 0.01f);
+
+            Destroy(_rigidbody);
+            foreach (Collider collider in colliders)
+            {
+                collider.enabled = false;
             }
         }
 
@@ -296,13 +287,10 @@ namespace _TW_Framework
             _animation.PlayQueued(clipName);
         }
 
-        [System.Serializable]
+        [Serializable]
         public class MeleeAttack
         {
             protected UnitHandler _unitHandler;
-
-            [ReadOnly]
-            public UnitHandler MeleeAttackingUnit;
 
             [Space(10)]
             [ReadOnly]
@@ -322,73 +310,51 @@ namespace _TW_Framework
                 meleeAttackDamage = attackDamage;
                 meleeAttackSpeed = attackSpeed;
                 meleeAttackRange = attackRange;
+
+                SeekAttackableUnitAsync().Forget();
             }
 
-            public async UniTask SeekToMeleeAttackAsync()
+            protected async UniTask SeekAttackableUnitAsync()
             {
-                while (_unitHandler.IsDead == false)
+                await UniTask.WaitForSeconds(UnityEngine.Random.Range(1f, 2f));
+
+                while (_unitHandler.IsValid == true)
                 {
-                    if (MeleeAttackingUnit == null)
+                    Collider[] overlappedColliders = Physics.OverlapSphere(_unitHandler.transform.position, meleeAttackRange);
+                    foreach (Collider overlappedCollider in overlappedColliders)
                     {
-                        Collider[] overlappedColliders = Physics.OverlapSphere(_unitHandler.transform.position, meleeAttackRange);
-                        foreach (Collider overlappedCollider in overlappedColliders)
+                        if (overlappedCollider.TryGetComponent<UnitHandler>(out UnitHandler overlappedUnit) == true &&
+                            overlappedUnit.IsValid == true &&
+                            overlappedUnit._TeamType != _unitHandler._TeamType)
                         {
-                            if (overlappedCollider.TryGetComponent<UnitHandler>(out UnitHandler unitHandler) == true)
-                            {
-                                if (unitHandler._TeamType != _unitHandler._TeamType &&
-                                   (unitHandler.transform.position - _unitHandler.transform.position).magnitude <= meleeAttackRange &&
-                                    unitHandler.IsValid == true)
-                                {
-                                    MeleeAttackingUnit = unitHandler;
-                                    MeleeAttackAsync().Forget();
-                                }
-                            }
+                            await AttackAsync(overlappedUnit);
                         }
                     }
-                    else if ((MeleeAttackingUnit.transform.position - _unitHandler.transform.position).magnitude <= meleeAttackRange)
-                    {
-                        MeleeAttackAsync().Forget();
-                    }
-                    else
-                    {
-                        MeleeAttackingUnit = null;
-                    }
 
-                    await UniTaskEx.WaitForSeconds(_unitHandler, 1, UnityEngine.Random.Range(0.4f, 0.6f));
+                    await UniTask.WaitForSeconds(UnityEngine.Random.Range(1f, 2f));
                 }
             }
 
-            protected async UniTask MeleeAttackAsync()
+            protected async UniTask AttackAsync(UnitHandler targetUnit)
             {
-                while (MeleeAttackingUnit.IsValid == true && _unitHandler.IsValid == true)
+                while (targetUnit.IsValid == true &&
+                      (targetUnit.transform.position - _unitHandler.transform.position).magnitude < meleeAttackRange &&
+                      _unitHandler.IsValid == true)
                 {
-                    _unitHandler._UnitState = UnitState.MeleeAttacking;
                     _unitHandler.PlayAnimation("MeleeAttack");
+                    IDamageable damageable = targetUnit;
+                    damageable.TakeDamage(meleeAttackDamage, DieType.Animated, Vector3.zero);
 
-                    IDamageable damageable = MeleeAttackingUnit;
-                    damageable.TakeDamage(meleeAttackDamage, DieType.Animated);
-
-                    await UniTaskEx.WaitForSeconds(_unitHandler, 1, UnityEngine.Random.Range(meleeAttackSpeed - 0.5f, meleeAttackSpeed + 0.5f));
-                }
-
-                if (_unitHandler.IsStopped == true)
-                {
-                    _unitHandler._UnitState = UnitState.Idle;
-                }
-                else
-                {
-                    _unitHandler._UnitState = UnitState.Moving;
+                    await UniTask.WaitForSeconds(UnityEngine.Random.Range(meleeAttackSpeed - 0.5f, meleeAttackSpeed + 0.5f));
                 }
             }
         }
 
-        [System.Serializable]
+        [Serializable]
         public class RangedAttack
         {
             protected UnitHandler _unitHandler;
 
-            [ReadOnly]
-            public UnitHandler RangedAttackingUnit;
             [ReadOnly]
             public PoolerType _PoolerType;
 
@@ -429,7 +395,6 @@ namespace _TW_Framework
             public virtual void Initialize(UnitHandler unitHandler, WeaponInfo weaponInfo)
             {
                 _unitHandler = unitHandler;
-                _unitHandler.OnStateChanged += OnStateChanged;
 
                 maxAmmoCount = weaponInfo.MaxAmmo;
                 currentAmmoCount = maxAmmoCount;
@@ -440,23 +405,15 @@ namespace _TW_Framework
                 accuracy = weaponInfo.Accuracy;
 
                 _PoolerType = weaponInfo._PoolerType;
+
+                SeekAttackableUnitAsync().Forget();
             }
 
-            protected void OnStateChanged(UnitState unitState)
+            protected async UniTask SeekAttackableUnitAsync()
             {
-                if (unitState == UnitState.Idle)
-                {
-                    SeekToRangedAttackAsync().Forget();
-                }
-                else if (unitState == UnitState.Moving)
-                {
-                    RangedAttackingUnit = null;
-                }
-            }
+                await UniTask.WaitForSeconds(UnityEngine.Random.Range(1f, 2f));
 
-            public async UniTask SeekToRangedAttackAsync()
-            {
-                while (RangedAttackingUnit == null && _unitHandler.IsValid == true && _unitHandler._UnitState == UnitState.Idle && currentAmmoCount > 0)
+                while (_unitHandler.IsValid == true)
                 {
                     Collider[] overlappedColliders = Physics.OverlapSphere(_unitHandler.transform.position, rangedAttackRange);
                     foreach (Collider overlappedCollider in overlappedColliders)
@@ -466,46 +423,38 @@ namespace _TW_Framework
 
                         if (angleToTarget < rangedAttackAngle * 0.5f)
                         {
-                            if (overlappedCollider.TryGetComponent<UnitHandler>(out UnitHandler unitHandler) == true)
+                            if (overlappedCollider.TryGetComponent<UnitHandler>(out UnitHandler overlappedUnit) == true &&
+                                overlappedUnit.IsValid == true &&
+                                overlappedUnit._TeamType != _unitHandler._TeamType)
                             {
-                                if (unitHandler._TeamType != _unitHandler._TeamType)
-                                {
-                                    RangedAttackingUnit = unitHandler;
-                                    RangedAttackAsync().Forget();
-
-                                    return;
-                                }
+                                await AttackAsync(overlappedUnit);
                             }
                         }
                     }
 
-                    await UniTaskEx.WaitForSeconds(_unitHandler, 0, UnityEngine.Random.Range(0.4f, 0.6f));
+                    await UniTask.WaitForSeconds(1f);
                 }
             }
 
-            protected async UniTask RangedAttackAsync()
+            protected async UniTask AttackAsync(UnitHandler targetUnit)
             {
-                while (RangedAttackingUnit != null && (_unitHandler._UnitState == UnitState.Idle || _unitHandler._UnitState == UnitState.RangedAttacking) && _unitHandler.IsDead == false && currentAmmoCount > 0)
+                while (targetUnit.IsValid == true &&
+                      (targetUnit.transform.position - _unitHandler.transform.position).magnitude < rangedAttackRange &&
+                       _unitHandler.IsValid == true &&
+                       currentAmmoCount > 0)
                 {
                     while (reloadingRemained > 0f)
                     {
                         reloadingRemained -= Time.deltaTime;
-                        await UniTaskEx.Yield(_unitHandler, 0);
+                        await UniTask.Yield();
                     }
 
-                    if (_unitHandler.IsValid == false || RangedAttackingUnit.IsValid == false)
-                    {
-                        break;
-                    }
+                    await UniTask.WaitUntil(() => _unitHandler.IsStopped == true);
 
-                    _unitHandler._UnitState = UnitState.RangedAttacking;
                     _unitHandler.PlayAnimation("RangedAttack");
-
                     int randomIndex = UnityEngine.Random.Range(0, _unitHandler.fireClips.Length);
                     _unitHandler._audioSource.PlayOneShot(_unitHandler.fireClips[randomIndex]);
-
                     _unitHandler.muzzleFlash.Play();
-
                     _PoolerType.EnablePool<BulletHandler>(BeforePool);
                     void BeforePool(BulletHandler bullet)
                     {
@@ -515,27 +464,12 @@ namespace _TW_Framework
                         Vector3 accuracyApplied = Vector3.Lerp(maxRandomed, Vector3.zero, accuracy / 100f);
 
                         bullet.transform.position = _unitHandler.muzzleFlash.transform.position;
-                        Vector3 direction = (RangedAttackingUnit.MiddlePos - _unitHandler.MiddlePos).normalized;
+                        Vector3 direction = (targetUnit.MiddlePos - _unitHandler.MiddlePos).normalized;
                         bullet.transform.eulerAngles = Quaternion.LookRotation(direction).eulerAngles + accuracyApplied;
                     }
 
                     currentAmmoCount--;
-
                     reloadingRemained = UnityEngine.Random.Range(rangedAttackSpeed - 0.5f, rangedAttackSpeed + 0.5f);
-                    while (reloadingRemained > 0f)
-                    {
-                        reloadingRemained -= Time.deltaTime;
-                        await UniTaskEx.Yield(_unitHandler, 0);
-                    }
-                }
-
-                if (_unitHandler.IsStopped == true)
-                {
-                    _unitHandler._UnitState = UnitState.Idle;
-                }
-                else
-                {
-                    _unitHandler._UnitState = UnitState.Moving;
                 }
             }
         }

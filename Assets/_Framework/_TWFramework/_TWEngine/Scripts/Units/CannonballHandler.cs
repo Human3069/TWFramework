@@ -32,16 +32,11 @@ namespace _TW_Framework
                         if (this._teamType != hitHandler._TeamType &&
                             hitHandler.IsDead == false)
                         {
-                            IDamageable damageable = hitHandler as IDamageable;
-                            damageable.TakeDamage(_damage, DieType.Physical);
-
-                            hit.collider.isTrigger = false;
-
                             float currentPower = _rigidbody.linearVelocity.magnitude / 10f;
                             currentPower = Mathf.Lerp(0f, currentPower, Random.Range(0.25f, 1f));
 
-                            Rigidbody hitRigidbody = hitHandler.AddComponent<Rigidbody>();
-                            hitRigidbody.AddForce(this.transform.forward * currentPower, ForceMode.Impulse);
+                            IDamageable damageable = hitHandler as IDamageable;
+                            damageable.TakeDamage(_damage, DieType.Physical, this.transform.forward * currentPower);
                         }
                     }
                     else

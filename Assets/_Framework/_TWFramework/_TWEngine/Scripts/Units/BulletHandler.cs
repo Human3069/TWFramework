@@ -76,7 +76,7 @@ namespace _TW_Framework
                         if (this._teamType != hitHandler._TeamType && hitHandler.IsDead == false)
                         {
                             IDamageable damageable = hitHandler as IDamageable;
-                            damageable.TakeDamage(_damage, DieType.Animated);
+                            damageable.TakeDamage(_damage, DieType.Animated, Vector3.zero);
 
                             if (this.gameObject.activeSelf == true)
                             {

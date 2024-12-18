@@ -11,9 +11,14 @@ namespace _TW_Framework
 
         public abstract void Initialize(UnitInfo[] unitInfos, Vector3[] startPoints, float unitDistance, float facingAngle);
 
-        public virtual void OnAllUnitsDead(BaseFormationController controller)
+        public virtual void OnAllUnitsDead(int index)
         {
-            allControllerList.Remove(controller);
+            allControllerList.RemoveAt(index);
+
+            for (int i = 0; i < allControllerList.Count; i++)
+            {
+                allControllerList[i].ResetSelectedIndex(i);
+            }
         }
     }
 }

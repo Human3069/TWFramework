@@ -36,4 +36,4 @@ MonoBehaviour:
       Value:
         UnitSpacing: 4
         NoiseAmount: 2
-  IconSprite: {fileID: 21300000, guid: 265ef5ae073b8d34d8e38a7ff24a8eab, type: 3}
+  IconSprite: {fileID: 21300000, guid: 77638d92690ebc844982a8fbbb873702, type: 3}

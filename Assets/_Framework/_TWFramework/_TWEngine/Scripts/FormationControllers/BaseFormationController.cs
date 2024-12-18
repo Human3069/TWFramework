@@ -155,11 +155,11 @@ namespace _TW_Framework
             {
                 if (this is PlayerFormationController)
                 {
-                    TWManager.Instance.Player.OnAllUnitsDead(this);
+                    TWManager.Instance.Player.OnAllUnitsDead(SelectedIndex);
                 }
                 else if (this is EnemyFormationController)
                 {
-                    TWManager.Instance.Enemy.OnAllUnitsDead(this);
+                    TWManager.Instance.Enemy.OnAllUnitsDead(SelectedIndex);
                 }
                 else
                 {
@@ -313,7 +313,7 @@ namespace _TW_Framework
 
         [HideInInspector]
         public float CurrentFacingAngle;
-        [HideInInspector]
+        [ReadOnly]
         public int SelectedIndex = -1;
 
         [HideInInspector]
@@ -358,6 +358,11 @@ namespace _TW_Framework
             }
 
             SelectedIndex = selectedIndex;
+        }
+
+        public void ResetSelectedIndex(int index)
+        {
+            SelectedIndex = index;
         }
 
         protected async UniTask YieldPositionRoutine()

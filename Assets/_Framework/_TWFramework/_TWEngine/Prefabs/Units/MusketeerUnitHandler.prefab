@@ -209,7 +209,7 @@ GameObject:
   - component: {fileID: 8091776970705940153}
   - component: {fileID: 9051229348312674934}
   - component: {fileID: 8091776970705940154}
-  - component: {fileID: 2631947040344585326}
+  - component: {fileID: 3979651096528783482}
   - component: {fileID: 8907931714062519168}
   - component: {fileID: 8556016846038936868}
   - component: {fileID: 5429141321770747061}
@@ -250,7 +250,7 @@ MonoBehaviour:
   m_EditorClassIdentifier: 
   Controller: {fileID: 0}
   _TeamType: 0
-  _unitState: 0
+  unitCategory: 0
   maxHealth: 100
   _currentHealth: 0
   muzzleFlash: {fileID: 7979955507091386739}
@@ -264,12 +264,10 @@ MonoBehaviour:
   IsYielding: 0
   IsDead: 0
   meleeAttack:
-    MeleeAttackingUnit: {fileID: 0}
     meleeAttackDamage: 10
     meleeAttackSpeed: 1
     meleeAttackRange: 2
   rangedAttack:
-    RangedAttackingUnit: {fileID: 0}
     _PoolerType: 0
     rangedAttackDamage: 50
     rangedAttackSpeed: 15
@@ -301,8 +299,8 @@ NavMeshAgent:
   m_BaseOffset: 0
   m_WalkableMask: 4294967295
   m_ObstacleAvoidanceType: 4
---- !u!65 &2631947040344585326
-BoxCollider:
+--- !u!136 &3979651096528783482
+CapsuleCollider:
   m_ObjectHideFlags: 0
   m_CorrespondingSourceObject: {fileID: 0}
   m_PrefabInstance: {fileID: 0}
@@ -319,8 +317,10 @@ BoxCollider:
   m_IsTrigger: 0
   m_ProvidesContacts: 0
   m_Enabled: 1
-  serializedVersion: 3
-  m_Size: {x: 1, y: 2, z: 1}
+  serializedVersion: 2
+  m_Radius: 0.5
+  m_Height: 2
+  m_Direction: 1
   m_Center: {x: 0, y: 1, z: 0}
 --- !u!111 &8907931714062519168
 Animation:

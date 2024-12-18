@@ -109,8 +109,6 @@ namespace _TW_Framework
 
         protected void ReinstantiateSilhouetteFormation()
         {
-            Debug.Log("reints");
-
             (Vector3 startPos, Vector3 endPos) = _controller.GetControlPoints();
             Vector3 middlePos = Vector3.Lerp(startPos, endPos, 0.5f);
             

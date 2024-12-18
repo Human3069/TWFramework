@@ -38,7 +38,7 @@ namespace _TW_Framework
         [SerializeField]
         protected List<Button> cardButtonList;
 
-        protected int pinnedIndex = -1;
+        public static int PinnedIndex = -1;
 
         protected void Awake()
         {
@@ -61,14 +61,40 @@ namespace _TW_Framework
         {
             for (int i = 0; i < unitInfos.Length; i++)
             {
-                int localIndex = i;
-
                 UI_Card cardInstance = Instantiate(cardPrefab, cardParent);
-                cardInstance.SelectButton.onClick.AddListener(() => OnClickCardButton(localIndex));
 
                 cardButtonList.Add(cardInstance.SelectButton);
-                cardInstance.Initialize(unitInfos[i], controllerList[i]);
+                cardInstance.Initialize(unitInfos[i], this, controllerList[i]);
             }
+        }
+
+        public void OnClickAnyButton(List<int> selectedIndexList, List<int> deselectedIndexList)
+        {
+            deselectedIndexList.RemoveAll(x => selectedIndexList.Contains(x) == true);
+            foreach (int index in selectedIndexList)
+            {
+                TWManager.Instance.Player.SelectController(index);
+                cardButtonList[index].image.color = Color.green;
+            }
+
+            foreach (int index in deselectedIndexList)
+            {
+                TWManager.Instance.Player.DeselectController(index);
+                cardButtonList[index].image.color = Color.white;
+            }
+
+            foreach (int index in selectedIndexList)
+            {
+                TWManager.Instance.Player.SelectStateChanged(index);
+            }
+
+            ResetFormationToggles();
+        }
+
+        public void OnControllerDead(int allDeadControllerIndex)
+        {
+            Debug.Log(allDeadControllerIndex);
+            cardButtonList.RemoveAt(allDeadControllerIndex);
         }
 
         public void OnValueChangedUnitCountSlider(float _value)
@@ -242,9 +268,9 @@ namespace _TW_Framework
 
             if (Input.GetKey(KeyCode.LeftShift) == true)
             {
-                if (pinnedIndex != -1)
+                if (PinnedIndex != -1)
                 {
-                    int towardedIndex = pinnedIndex;
+                    int towardedIndex = PinnedIndex;
                     while (towardedIndex != targetIndex)
                     {
                         towardedIndex = (int)Mathf.MoveTowards(towardedIndex, targetIndex, 1);
@@ -254,7 +280,7 @@ namespace _TW_Framework
             }
             else if (Input.GetKey(KeyCode.LeftControl) == true)
             {
-                pinnedIndex = targetIndex;
+                PinnedIndex = targetIndex;
 
                 if (selectedIndexList.Contains(targetIndex) == true)
                 {
@@ -267,7 +293,7 @@ namespace _TW_Framework
             }
             else
             {
-                pinnedIndex = targetIndex;
+                PinnedIndex = targetIndex;
 
                 selectedIndexList.Clear();
                 selectedIndexList.Add(targetIndex);
@@ -292,6 +318,10 @@ namespace _TW_Framework
             }
 
             ResetFormationToggles();
+
+#if UNITY_EDITOR
+            UnityEditor.Selection.objects = selectedControllerList.ConvertAll(x => x.gameObject).ToArray();
+#endif
         }
 
         protected void ResetFormationToggles()
