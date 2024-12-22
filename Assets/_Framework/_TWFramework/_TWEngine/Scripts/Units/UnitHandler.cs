@@ -2,6 +2,7 @@
 using Cysharp.Threading.Tasks.Triggers;
 using EPOOutline;
 using System;
+using System.Threading;
 using Unity.VisualScripting;
 using UnityEngine;
 using UnityEngine.AI;
@@ -129,6 +130,14 @@ namespace _TW_Framework
             get
             {
                 return this.transform.position + Vector3.up;
+            }
+        }
+
+        public Vector3 Velocity
+        {
+            get
+            {
+                return _agent.velocity;
             }
         }
 
@@ -267,8 +276,10 @@ namespace _TW_Framework
 
         protected async UniTaskVoid PostDeadPhysicallyAsync(Rigidbody _rigidbody)
         {
-            await UniTask.WaitForSeconds(0.1f);
-            await UniTask.WaitWhile(() => _rigidbody.linearVelocity.sqrMagnitude > 0.01f);
+            CancellationToken token = _rigidbody.GetCancellationTokenOnDestroy();
+
+            await UniTask.WaitForSeconds(0.1f, cancellationToken : token);
+            await UniTask.WaitWhile(() => _rigidbody.linearVelocity.sqrMagnitude > 0.01f, cancellationToken : token);
 
             Destroy(_rigidbody);
             foreach (Collider collider in colliders)
@@ -451,9 +462,18 @@ namespace _TW_Framework
 
                     await UniTask.WaitUntil(() => _unitHandler.IsStopped == true);
 
+                    if (targetUnit.IsValid == false ||
+                       (targetUnit.transform.position - _unitHandler.transform.position).magnitude > rangedAttackRange ||
+                       _unitHandler.IsValid == false)
+                    {
+                        break;
+                    }
+
                     _unitHandler.PlayAnimation("RangedAttack");
+
                     int randomIndex = UnityEngine.Random.Range(0, _unitHandler.fireClips.Length);
                     _unitHandler._audioSource.PlayOneShot(_unitHandler.fireClips[randomIndex]);
+
                     _unitHandler.muzzleFlash.Play();
                     _PoolerType.EnablePool<BulletHandler>(BeforePool);
                     void BeforePool(BulletHandler bullet)
@@ -464,7 +484,14 @@ namespace _TW_Framework
                         Vector3 accuracyApplied = Vector3.Lerp(maxRandomed, Vector3.zero, accuracy / 100f);
 
                         bullet.transform.position = _unitHandler.muzzleFlash.transform.position;
-                        Vector3 direction = (targetUnit.MiddlePos - _unitHandler.MiddlePos).normalized;
+                        float distance = (targetUnit.MiddlePos - _unitHandler.MiddlePos).magnitude;
+
+                        PredictDataBundle predictBundle = PredictDataBundle.GetPredictData(_PoolerType);
+                        Vector3 predictPos = predictBundle.GetPredictedPosition(_unitHandler.muzzleFlash.transform.position, targetUnit);
+                        Debug.DrawLine(_unitHandler.MiddlePos, predictPos, Color.blue, 0.1f);
+                        Debug.DrawLine(predictPos, targetUnit.MiddlePos, Color.blue, 0.5f);
+
+                        Vector3 direction = (predictPos - _unitHandler.muzzleFlash.transform.position).normalized;
                         bullet.transform.eulerAngles = Quaternion.LookRotation(direction).eulerAngles + accuracyApplied;
                     }
 

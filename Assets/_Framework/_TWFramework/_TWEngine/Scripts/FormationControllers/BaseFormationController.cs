@@ -155,11 +155,11 @@ namespace _TW_Framework
             {
                 if (this is PlayerFormationController)
                 {
-                    TWManager.Instance.Player.OnAllUnitsDead(SelectedIndex);
+                    TWManager.Instance.Player.OnAllControllerUnitsDead(SelectedIndex);
                 }
                 else if (this is EnemyFormationController)
                 {
-                    TWManager.Instance.Enemy.OnAllUnitsDead(SelectedIndex);
+                    TWManager.Instance.Enemy.OnAllControllerUnitsDead(SelectedIndex);
                 }
                 else
                 {

@@ -22,9 +22,11 @@ namespace _TW_Framework
             while (this.enabled == true)
             {
                 Vector3 _current = currentPos == Vector3.zero ? this.transform.position : currentPos;
-                float distance = (_current - this.transform.position).magnitude;
-
-                RaycastHit[] hits = Physics.RaycastAll(_current, this.transform.forward, distance);
+      
+                float distance = (this.transform.position - _current).magnitude;
+                Vector3 direction = (this.transform.position - _current).normalized;
+            
+                RaycastHit[] hits = Physics.RaycastAll(_current, direction, distance);
                 foreach (RaycastHit hit in hits)
                 {
                     if (hit.collider.TryGetComponent<UnitHandler>(out UnitHandler hitHandler) == true)
@@ -70,13 +72,16 @@ namespace _TW_Framework
                                     obj.ReturnPool(hitPoolerType);
                                 }
                             }
+
+                            contactCount++;
+
+                            float currentVelocity = _rigidbody.linearVelocity.magnitude;
+                            this.transform.forward = GetReflectedAngle(direction, hit.normal);
+                            _rigidbody.linearVelocity = this.transform.forward * (currentVelocity / (contactCount + 1));
                         }
 
-                        contactCount++;
-
-                        float currentVelocity = _rigidbody.linearVelocity.magnitude;
-                        this.transform.forward = GetReflectedAngle(this.transform.forward, hit.normal, Random.Range(5f, 20f));
-                        _rigidbody.linearVelocity = this.transform.forward * (currentVelocity / (contactCount + 1));
+                        OnHitAction?.Invoke(this, hit);
+                        OnHitAction = null;
                     }
                 }
 
@@ -85,12 +90,10 @@ namespace _TW_Framework
             }
         }
 
-        protected Vector3 GetReflectedAngle(Vector3 inDirection, Vector3 inNormal, float additionalAngle)
+        protected Vector3 GetReflectedAngle(Vector3 inDirection, Vector3 inNormal)
         {
             Vector3 reflected = Vector3.Reflect(inDirection, inNormal);
-            Quaternion asAngleAxis = Quaternion.AngleAxis(additionalAngle, -Vector3.forward);
-
-            return asAngleAxis * reflected;
+            return reflected;
         }
     }
 }

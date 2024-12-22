@@ -4,10 +4,14 @@ using UnityEngine;
 
 namespace _TW_Framework
 {
+    [ExecuteAlways]
     public class MovableCameraHandler : MonoBehaviour
     {
         [SerializeField]
         protected Camera _camera;
+        [ReadOnly]
+        [SerializeField]
+        protected float distanceBetweenOrigin;
 
         [Space(10)]
         [SerializeField]
@@ -62,7 +66,18 @@ namespace _TW_Framework
 
         protected void Awake()
         {
-            GetInputAsync().Forget();
+            if (Application.isPlaying == true)
+            {
+                GetInputAsync().Forget();
+            }
+        }
+
+        protected void Update()
+        {
+            if (Application.isPlaying == false)
+            {
+                distanceBetweenOrigin = Vector3.Distance(this.transform.position, _camera.transform.position);
+            }
         }
 
         protected async UniTaskVoid GetInputAsync()
@@ -74,7 +89,7 @@ namespace _TW_Framework
 
             CurrentMouseZoom = mouseZoomRange.x;
 
-            while (this.enabled == true)
+            while (this.enabled == true && Application.isPlaying == true)
             {
                 HandleKeyInput();
                 HandleMouseWheelInput();

@@ -1,4 +1,5 @@
 using Cysharp.Threading.Tasks;
+using System;
 using UnityEngine;
 
 namespace _TW_Framework
@@ -30,6 +31,8 @@ namespace _TW_Framework
         [ReadOnly]
         [SerializeField]
         protected float _damage = 0f;
+
+        public Action<BulletHandler, RaycastHit> OnHitAction;
 
         protected virtual void Awake()
         {
@@ -122,6 +125,9 @@ namespace _TW_Framework
                             }
                         }
                     }
+
+                    OnHitAction?.Invoke(this, hit);
+                    OnHitAction = null;
                 }
 
                 currentPos = this.transform.position;

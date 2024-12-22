@@ -45,11 +45,11 @@ namespace _TW_Framework
             uiController.Initialize(unitInfos, allControllerList);
         }
 
-        public override void OnAllUnitsDead(int index)
+        public override void OnAllControllerUnitsDead(int index)
         {
             selectedControllerList.Remove(allControllerList[index] as PlayerFormationController);
 
-            base.OnAllUnitsDead(index);
+            base.OnAllControllerUnitsDead(index);
             uiController.OnControllerDead(index);
         }
 

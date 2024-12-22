@@ -93,8 +93,8 @@ namespace _TW_Framework
 
         public void OnControllerDead(int allDeadControllerIndex)
         {
-            Debug.Log(allDeadControllerIndex);
             cardButtonList.RemoveAt(allDeadControllerIndex);
+            ResetFormationToggles();
         }
 
         public void OnValueChangedUnitCountSlider(float _value)
@@ -326,30 +326,42 @@ namespace _TW_Framework
 
         protected void ResetFormationToggles()
         {
-            FormationType commonType = FormationType.Rectangle | FormationType.Square | FormationType.Skirmish | FormationType.Triangle | FormationType.Cone | FormationType.Circle | FormationType.Line;
-            FormationType selectedType = FormationType.Rectangle | FormationType.Square | FormationType.Skirmish | FormationType.Triangle | FormationType.Cone | FormationType.Circle | FormationType.Line;
-            foreach (PlayerFormationController controller in TWManager.Instance.Player.GetSelectedControllerList())
+            List<PlayerFormationController> selectedControllerList = TWManager.Instance.Player.GetSelectedControllerList();
+            if (selectedControllerList.Count == 0)
             {
-                FormationType availableType = controller._UnitInfo._FormationType;
-                FormationType currentType = controller.CurrentFormationType;
-
-                commonType &= availableType;
-                selectedType &= currentType;
+                rectangleFormationToggle.gameObject.SetActive(false);
+                squareFormationToggle.gameObject.SetActive(false);
+                skirmishFormationToggle.gameObject.SetActive(false);
+                triangleFormationToggle.gameObject.SetActive(false);
+                coneFormationToggle.gameObject.SetActive(false);
             }
+            else
+            {
+                FormationType commonType = FormationType.Rectangle | FormationType.Square | FormationType.Skirmish | FormationType.Triangle | FormationType.Cone | FormationType.Circle | FormationType.Line;
+                FormationType selectedType = FormationType.Rectangle | FormationType.Square | FormationType.Skirmish | FormationType.Triangle | FormationType.Cone | FormationType.Circle | FormationType.Line;
+                foreach (PlayerFormationController controller in selectedControllerList)
+                {
+                    FormationType availableType = controller._UnitInfo._FormationType;
+                    FormationType currentType = controller.CurrentFormationType;
 
-            rectangleFormationToggle.gameObject.SetActive(commonType.HasFlag(FormationType.Rectangle));
-            squareFormationToggle.gameObject.SetActive(commonType.HasFlag(FormationType.Square));
-            skirmishFormationToggle.gameObject.SetActive(commonType.HasFlag(FormationType.Skirmish));
-            triangleFormationToggle.gameObject.SetActive(commonType.HasFlag(FormationType.Triangle));
-            coneFormationToggle.gameObject.SetActive(commonType.HasFlag(FormationType.Cone));
+                    commonType &= availableType;
+                    selectedType &= currentType;
+                }
 
-            rectangleFormationToggle.SetIsOnWithoutNotify(false);
-            squareFormationToggle.SetIsOnWithoutNotify(false);
-            skirmishFormationToggle.SetIsOnWithoutNotify(false);
-            triangleFormationToggle.SetIsOnWithoutNotify(false);
-            coneFormationToggle.SetIsOnWithoutNotify(false);
+                rectangleFormationToggle.gameObject.SetActive(commonType.HasFlag(FormationType.Rectangle));
+                squareFormationToggle.gameObject.SetActive(commonType.HasFlag(FormationType.Square));
+                skirmishFormationToggle.gameObject.SetActive(commonType.HasFlag(FormationType.Skirmish));
+                triangleFormationToggle.gameObject.SetActive(commonType.HasFlag(FormationType.Triangle));
+                coneFormationToggle.gameObject.SetActive(commonType.HasFlag(FormationType.Cone));
 
-            SelectTypeToToggle(selectedType)?.SetIsOnWithoutNotify(true);
+                rectangleFormationToggle.SetIsOnWithoutNotify(false);
+                squareFormationToggle.SetIsOnWithoutNotify(false);
+                skirmishFormationToggle.SetIsOnWithoutNotify(false);
+                triangleFormationToggle.SetIsOnWithoutNotify(false);
+                coneFormationToggle.SetIsOnWithoutNotify(false);
+
+                SelectTypeToToggle(selectedType)?.SetIsOnWithoutNotify(true);
+            }
         }
 
         protected Toggle SelectTypeToToggle(FormationType type)
