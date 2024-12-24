@@ -8,7 +8,13 @@ namespace _TW_Framework
     public class MovableCameraHandler : MonoBehaviour
     {
         [SerializeField]
-        protected Camera _camera;
+        protected Transform targetParentT;
+        [SerializeField]
+        protected Transform targetChildT;
+        [SerializeField]
+        protected Transform targetSmoothT;
+
+        [Space(10)]
         [ReadOnly]
         [SerializeField]
         protected float distanceBetweenOrigin;
@@ -49,8 +55,8 @@ namespace _TW_Framework
                     _currentMouseZoom = Mathf.Clamp(value, mouseZoomRange.x, mouseZoomRange.y);
                     currentMouseZoomNormal = Mathf.InverseLerp(mouseZoomRange.x, mouseZoomRange.y, _currentMouseZoom);
 
-                    Vector3 zoomEndPos = this.transform.position + _camera.transform.forward * zoomOutDistance;
-                    _camera.transform.position = Vector3.Lerp(this.transform.position, zoomEndPos, currentMouseZoomNormal);
+                    Vector3 zoomEndPos = targetParentT.position + targetChildT.transform.forward * zoomOutDistance;
+                    targetChildT.transform.position = Vector3.Lerp(targetParentT.position, zoomEndPos, currentMouseZoomNormal);
                 }
             }
         }
@@ -60,9 +66,6 @@ namespace _TW_Framework
         protected float currentMouseZoomNormal;
         [SerializeField]
         protected float zoomOutDistance;
-
-        protected Vector3 requiredPos;
-        protected Quaternion requiredRot;
 
         protected void Awake()
         {
@@ -76,16 +79,13 @@ namespace _TW_Framework
         {
             if (Application.isPlaying == false)
             {
-                distanceBetweenOrigin = Vector3.Distance(this.transform.position, _camera.transform.position);
+                distanceBetweenOrigin = Vector3.Distance(targetParentT.position, targetChildT.transform.position);
             }
         }
 
         protected async UniTaskVoid GetInputAsync()
         {
             await UniTask.WaitUntil(() => KeyInputManager.Instance != null);
-
-            requiredPos = this.transform.position;
-            requiredRot = this.transform.rotation;
 
             CurrentMouseZoom = mouseZoomRange.x;
 
@@ -100,11 +100,11 @@ namespace _TW_Framework
 
         protected void HandleKeyInput()
         {
-            float moveDelta = moveSpeed * Time.deltaTime;
-            float moveSmoothDelta = moveLerpThreshold * Time.deltaTime;
+            float moveDelta = moveSpeed * Time.unscaledDeltaTime;
+            float moveSmoothDelta = moveLerpThreshold * Time.unscaledDeltaTime;
 
-            float rotateDelta = rotateSpeed * Time.deltaTime;
-            float rotateSmoothDelta = rotateLerpThreshold * Time.deltaTime;
+            float rotateDelta = rotateSpeed * Time.unscaledDeltaTime;
+            float rotateSmoothDelta = rotateLerpThreshold * Time.unscaledDeltaTime;
 
             bool isMoveForward = KeyType.Move_Forward.IsOn();
             bool isMoveBackward = KeyType.Move_Backward.IsOn();
@@ -118,38 +118,43 @@ namespace _TW_Framework
             if (isAccelerated == true)
             {
                 moveDelta *= accelerationMultiplier;
-                rotateDelta *= accelerationMultiplier;
             }
 
+            float verticalDelta = 0f;
+            float horizontalDelta = 0f;
             if (isMoveForward == true)
             {
-                requiredPos += this.transform.forward * moveDelta;
+                verticalDelta = moveDelta;
             }
             else if (isMoveBackward == true)
             {
-                requiredPos -= this.transform.forward * moveDelta;
+                verticalDelta = -moveDelta;
             }
 
             if (isMoveLeft == true)
             {
-                requiredPos -= this.transform.right * moveDelta;
+                horizontalDelta = -moveDelta;
             }
             else if (isMoveRight == true)
             {
-                requiredPos += this.transform.right * moveDelta;
+                horizontalDelta = moveDelta;
             }
 
             if (isTurnLeft == true)
             {
-                requiredRot *= Quaternion.Euler(0, -rotateDelta, 0);
+                Physics.Raycast(targetChildT.position, targetChildT.forward, out RaycastHit hit, Mathf.Infinity);
+                targetParentT.RotateAround(hit.point, Vector3.up, -rotateDelta);
             }
             else if (isTurnRight == true)
             {
-                requiredRot *= Quaternion.Euler(0, rotateDelta, 0);
+                Physics.Raycast(targetChildT.position, targetChildT.forward, out RaycastHit hit, Mathf.Infinity);
+                targetParentT.RotateAround(hit.point, Vector3.up, rotateDelta);
             }
 
-            this.transform.position = Vector3.Lerp(this.transform.position, requiredPos, moveSmoothDelta);
-            this.transform.rotation = Quaternion.Slerp(this.transform.rotation, requiredRot, rotateSmoothDelta);
+            targetParentT.Translate(horizontalDelta, 0f, verticalDelta);
+
+            targetSmoothT.position = Vector3.Lerp(targetSmoothT.position, targetChildT.position, moveSmoothDelta);
+            targetSmoothT.rotation = Quaternion.Lerp(targetSmoothT.rotation, targetChildT.rotation, rotateSmoothDelta);
         }
 
         protected void HandleMouseWheelInput()

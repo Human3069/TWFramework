@@ -32,6 +32,19 @@ namespace _TW_Framework
         [SerializeField]
         protected float lineLength;
 
+        protected bool _isSelecting = false;
+        public bool IsSelecting
+        {
+            get
+            {
+                return _isSelecting;
+            }
+            protected set
+            {
+                _isSelecting = value;
+            }
+        }
+
         protected bool _isHandling = false;
         public bool IsHandling
         {
@@ -137,6 +150,8 @@ namespace _TW_Framework
 
         protected async UniTaskVoid PostOnLeftClicked()
         {
+            IsSelecting = true;
+
             Vector2 startScreenPoint = Input.mousePosition;
             Ray ray = _camera.ScreenPointToRay(startScreenPoint);
             Physics.Raycast(ray, out RaycastHit hit, Mathf.Infinity, groundLayerMask);
@@ -148,7 +163,7 @@ namespace _TW_Framework
             while (Input.GetMouseButton(0) == true)
             {
                 Vector2 endScreenPoint = Input.mousePosition;
-                Pyramid selectionPyramid = new Pyramid(_camera, 200f, startScreenPoint, endScreenPoint);
+                Pyramid selectionPyramid = new Pyramid(_camera, 2000f, startScreenPoint, endScreenPoint);
 
                 Mesh pyramidMesh = selectionPyramid.GenerateMesh();
                 selectionMeshCollider.sharedMesh = pyramidMesh;
@@ -180,6 +195,7 @@ namespace _TW_Framework
             }
 
             OnEndMouseSelect?.Invoke(selectedControllerList);
+            IsSelecting = false;
         }
 
         protected void OnTriggerEnter(Collider collider)

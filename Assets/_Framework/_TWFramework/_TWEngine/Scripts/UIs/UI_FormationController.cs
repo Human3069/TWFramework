@@ -1,4 +1,6 @@
-﻿using System.Collections.Generic;
+﻿using Cysharp.Threading.Tasks;
+using System.Collections.Generic;
+using Unity.VisualScripting;
 using UnityEngine;
 using UnityEngine.UI;
 
@@ -16,7 +18,11 @@ namespace _TW_Framework
         [SerializeField]
         private Text unitNoiseText;
 
-        [Header("Bottombar Panel")]
+        [Header("Selection Panel")]
+        [SerializeField]
+        protected Image selectionImage;
+
+        [Header("Bottombar Panel - Formations")]
         [SerializeField]
         protected Toggle rectangleFormationToggle;
         [SerializeField]
@@ -28,7 +34,19 @@ namespace _TW_Framework
         [SerializeField]
         protected Toggle skirmishFormationToggle;
 
-        [Space(10)]
+        [Header("Bottombar Panel - IngameSpeed")]
+        [SerializeField]
+        protected Toggle _0xSpeedToggle;
+        [SerializeField]
+        protected Toggle _0_5xSpeedToggle;
+        [SerializeField]
+        protected Toggle _1xSpeedToggle;
+        [SerializeField]
+        protected Toggle _2xSpeedToggle;
+        [SerializeField]
+        protected Toggle _4xSpeedToggle;
+
+        [Header("Bottombar Panel - Cards")]
         [SerializeField]
         protected UI_Card cardPrefab;
         [SerializeField]
@@ -46,6 +64,8 @@ namespace _TW_Framework
             TWManager.Instance.Player.MouseEventHandler.OnDuringMouseSelect += OnDuringMouseSelect;
             TWManager.Instance.Player.OnSelectStateChanged += OnSelectStateChanged;
 
+            selectionImage.gameObject.SetActive(false);
+
             unitCountText.text = "Unit Count: 13";
             unitSpacingText.text = "Unit Spacing : 2.00";
             unitNoiseText.text = "Unit Noise : 0.00";
@@ -55,6 +75,51 @@ namespace _TW_Framework
             coneFormationToggle.onValueChanged.AddListener(OnValueChangedConeFormationToggle);
             squareFormationToggle.onValueChanged.AddListener(OnValueChangedSquareFormationToggle);
             skirmishFormationToggle.onValueChanged.AddListener(OnValueChangedSkirmishFormationToggle);
+
+            _0xSpeedToggle.onValueChanged.AddListener(OnValueChanged0xToggle);
+            void OnValueChanged0xToggle(bool isOn)
+            {
+                if (isOn == true)
+                {
+                    Time.timeScale = 0f;
+                }
+            }
+
+            _0_5xSpeedToggle.onValueChanged.AddListener(OnValueChanged0_5xToggle);
+            void OnValueChanged0_5xToggle(bool isOn)
+            {
+                if (isOn == true)
+                {
+                    Time.timeScale = 0.5f;
+                }
+            }
+
+            _1xSpeedToggle.onValueChanged.AddListener(OnValueChanged1xToggle);
+            void OnValueChanged1xToggle(bool isOn)
+            {
+                if (isOn == true)
+                {
+                    Time.timeScale = 1f;
+                }
+            }
+
+            _2xSpeedToggle.onValueChanged.AddListener(OnValueChanged2xToggle);
+            void OnValueChanged2xToggle(bool isOn)
+            {
+                if (isOn == true)
+                {
+                    Time.timeScale = 2f;
+                }
+            }
+
+            _4xSpeedToggle.onValueChanged.AddListener(OnValueChanged4xToggle);
+            void OnValueChanged4xToggle(bool isOn)
+            {
+                if (isOn == true)
+                {
+                    Time.timeScale = 4f;
+                }
+            }
         }
 
         public void Initialize(UnitInfo[] unitInfos, List<BaseFormationController> controllerList)
@@ -226,11 +291,34 @@ namespace _TW_Framework
 
         protected void OnStartMouseSelect()
         {
+            // Selection Image
+            SetSelectionImageRectAsync().Forget();
+
+            // Bottombar
             List<PlayerFormationController> allControllerList = TWManager.Instance.Player.GetAllControllerList();
             foreach (PlayerFormationController controller in allControllerList)
             {
                 cardButtonList[controller.SelectedIndex].image.color = Color.white;
             }
+        }
+
+        protected async UniTaskVoid SetSelectionImageRectAsync()
+        {
+            Vector2 mousePos = Input.mousePosition;
+            selectionImage.rectTransform.position = mousePos;
+            selectionImage.gameObject.SetActive(true);
+
+            while (TWManager.Instance.Player.MouseEventHandler.IsSelecting == true)
+            {
+                Vector2 currentMousePos = Input.mousePosition;
+                Vector2 mouseDelta = currentMousePos - mousePos;
+
+                selectionImage.rectTransform.pivot = new Vector2(mouseDelta.x < 0 ? 1 : 0, mouseDelta.y < 0 ? 1 : 0);
+                selectionImage.rectTransform.sizeDelta = new Vector2(Mathf.Abs(mouseDelta.x), Mathf.Abs(mouseDelta.y));
+
+                await UniTask.Yield();
+            }
+            selectionImage.gameObject.SetActive(false);
         }
 
         protected void OnDuringMouseSelect(List<PlayerFormationController> controllerList)
