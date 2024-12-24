@@ -49,8 +49,7 @@ namespace _TW_Framework
             List<Vector3> posList = FormationPositionerEx.GetAlignedPositionList(UnitHandlerList.Count, CurrentFormation, startPoint, facingAngle);
             for (int i = 0; i < UnitHandlerList.Count; i++)
             {
-                UnitHandlerList[i].transform.position = posList[i] + UnitFormationHelper.GetNoise(NoiseAmount);
-                UnitHandlerList[i].transform.eulerAngles = new Vector3(0f, facingAngle, 0f);
+                UnitHandlerList[i].SetTargetDestinationImmediately(posList[i] + UnitFormationHelper.GetNoise(NoiseAmount), facingAngle);
             }
 
             SelectedIndex = selectedIndex;

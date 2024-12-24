@@ -1,5 +1,4 @@
 ﻿using Cysharp.Threading.Tasks;
-using Cysharp.Threading.Tasks.Triggers;
 using EPOOutline;
 using System;
 using System.Threading;
@@ -216,6 +215,21 @@ namespace _TW_Framework
             }
 
             IsStopped = Vector3.Distance(_agent.destination, this.transform.position) < _agent.stoppingDistance;
+        }
+
+        public void SetTargetDestinationImmediately(Vector3 position, float newFacingAngle)
+        {
+            if (_agent == null)
+            {
+                _agent = this.GetComponent<NavMeshAgent>();
+            }
+
+            faceOnDestination = true;
+
+            _agent.Warp(position);
+            this.transform.eulerAngles = new Vector3(0f, newFacingAngle, 0f);
+
+            facingAngle = newFacingAngle;
         }
 
         public void SetTargetDestination(Vector3 newTargetDestination)
