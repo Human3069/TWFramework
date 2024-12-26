@@ -13,6 +13,12 @@ namespace _TW_Framework
         Neutral
     }
 
+    public enum AttackType
+    {
+        Melee,
+        Ranged
+    }
+
     public abstract class BaseFormationController : MonoBehaviour
     {
         private const string _LOG_FORMAT = "<color=white><b>[BaseFormationController]</b></color> {0}";
@@ -40,10 +46,12 @@ namespace _TW_Framework
         }
 
         [Header("=== FormationController ===")]
+        [SerializeField]
+        protected AttackType _attackType;
         [ReadOnly]
         [SerializeField]
         protected BaseFormationController _targetController;
-        protected BaseFormationController TargetController
+        public BaseFormationController TargetController
         {
             get
             {
@@ -61,18 +69,25 @@ namespace _TW_Framework
 
         protected virtual async UniTask OnAssignedTargetController()
         {
-            while (TargetController != null && TargetController.UnitHandlerList.Count != 0)
+            if (_attackType == AttackType.Melee)
             {
-                Vector3 currentLeftDirection = (lineEndPos - lineStartPos).normalized;
-                float length = (lineEndPos - lineStartPos).magnitude;
+                while (TargetController != null && TargetController.UnitHandlerList.Count != 0)
+                {
+                    Vector3 currentLeftDirection = (lineEndPos - lineStartPos).normalized;
+                    float length = (lineEndPos - lineStartPos).magnitude;
 
-                Vector3 targetMiddlePos = TargetController.GetMiddlePos();
-                Vector3 targetLeftPos = targetMiddlePos + (currentLeftDirection * length * 0.5f);
-                Vector3 targetRightPos = targetMiddlePos - (currentLeftDirection * length * 0.5f);
+                    Vector3 targetMiddlePos = TargetController.GetMiddlePos();
+                    Vector3 targetLeftPos = targetMiddlePos + (currentLeftDirection * length * 0.5f);
+                    Vector3 targetRightPos = targetMiddlePos - (currentLeftDirection * length * 0.5f);
 
-                ApplyMouseFormationing(targetLeftPos, targetRightPos);
+                    ApplyMouseFormationing(targetLeftPos, targetRightPos);
 
-                await UniTask.WaitForSeconds(0.5f);
+                    await UniTask.WaitForSeconds(0.5f);
+                }
+            }
+            else if (_attackType == AttackType.Ranged)
+            {
+                return;
             }
         }
 

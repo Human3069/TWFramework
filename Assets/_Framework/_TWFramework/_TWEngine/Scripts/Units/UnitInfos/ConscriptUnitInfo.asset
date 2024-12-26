@@ -26,6 +26,6 @@ MonoBehaviour:
     _serializedList:
     - Key: 1
       Value:
-        UnitSpacing: 2
+        UnitSpacing: 1.4
         NoiseAmount: 0.15
   IconSprite: {fileID: 21300000, guid: 497c50c5f1825bc488e5de9affaea0d0, type: 3}

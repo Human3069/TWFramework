@@ -13,8 +13,8 @@ MonoBehaviour:
   m_Name: CannonWeaponInfo
   m_EditorClassIdentifier: 
   _PoolerType: 1
-  Accuracy: 80
+  Accuracy: 95
   Damage: 500
   Range: 600
   ReloadTime: 15
-  MaxAmmo: 20
+  MaxAmmo: 120

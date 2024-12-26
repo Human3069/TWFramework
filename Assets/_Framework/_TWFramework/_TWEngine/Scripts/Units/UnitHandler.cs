@@ -283,6 +283,7 @@ namespace _TW_Framework
                 }
 
                 Rigidbody _rigidbody = this.AddComponent<Rigidbody>();
+                _rigidbody.angularDamping = 3f;
                 _rigidbody.AddForce(thrownPower, ForceMode.Impulse);
                 PostDeadPhysicallyAsync(_rigidbody).Forget();
             }
@@ -452,7 +453,17 @@ namespace _TW_Framework
                                 overlappedUnit.IsValid == true &&
                                 overlappedUnit._TeamType != _unitHandler._TeamType)
                             {
-                                await AttackAsync(overlappedUnit);
+                                if (_unitHandler.Controller.TargetController == null)
+                                {
+                                    await AttackAsync(overlappedUnit);
+                                }
+                                else
+                                {
+                                    if (_unitHandler.Controller.TargetController == overlappedUnit.Controller)
+                                    {
+                                        await AttackAsync(overlappedUnit);
+                                    }
+                                }
                             }
                         }
                     }
