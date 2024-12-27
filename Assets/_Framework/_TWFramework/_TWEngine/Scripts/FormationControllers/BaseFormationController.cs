@@ -48,6 +48,18 @@ namespace _TW_Framework
         [Header("=== FormationController ===")]
         [SerializeField]
         protected AttackType _attackType;
+        public AttackType AttackType
+        {
+            get
+            {
+                return _attackType;
+            }
+            set
+            {
+                _attackType = value;
+            }
+        }
+
         [ReadOnly]
         [SerializeField]
         protected BaseFormationController _targetController;

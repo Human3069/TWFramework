@@ -34,6 +34,12 @@ namespace _TW_Framework
         [SerializeField]
         protected Toggle skirmishFormationToggle;
 
+        [Header("Bottombar Panel - AttackType")]
+        [SerializeField]
+        protected Toggle meleeAttackToggle;
+        [SerializeField]
+        protected Toggle rangeAttackToggle;
+
         [Header("Bottombar Panel - IngameSpeed")]
         [SerializeField]
         protected Toggle _0xSpeedToggle;
@@ -75,6 +81,26 @@ namespace _TW_Framework
             coneFormationToggle.onValueChanged.AddListener(OnValueChangedConeFormationToggle);
             squareFormationToggle.onValueChanged.AddListener(OnValueChangedSquareFormationToggle);
             skirmishFormationToggle.onValueChanged.AddListener(OnValueChangedSkirmishFormationToggle);
+
+            meleeAttackToggle.onValueChanged.AddListener(OnValueChangedMeleeAttackToggle);
+            void OnValueChangedMeleeAttackToggle(bool isOn)
+            {
+                if (isOn == true)
+                {
+                    List<PlayerFormationController> selectedControllerList = TWManager.Instance.Player.GetSelectedControllerList();
+                    selectedControllerList.ForEach(x => x.AttackType = AttackType.Melee);
+                }
+            }
+
+            rangeAttackToggle.onValueChanged.AddListener(OnValueChangedRangeAttackToggle);
+            void OnValueChangedRangeAttackToggle(bool isOn)
+            {
+                if (isOn == true)
+                {
+                    List<PlayerFormationController> selectedControllerList = TWManager.Instance.Player.GetSelectedControllerList();
+                    selectedControllerList.ForEach(x => x.AttackType = AttackType.Ranged);
+                }
+            }
 
             _0xSpeedToggle.onValueChanged.AddListener(OnValueChanged0xToggle);
             void OnValueChanged0xToggle(bool isOn)
