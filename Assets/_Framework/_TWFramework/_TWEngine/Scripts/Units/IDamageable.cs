@@ -10,13 +10,13 @@ namespace _TW_Framework
             set;
         }
 
-        void TakeDamage(float damage, DieType dieType, Vector3 thrownPower)
+        void TakeDamage(BaseFormationController attackerController, float damage, DieType dieType, Vector3 thrownPower)
         {
             CurrentHealth -= damage;
 
             if (CurrentHealth > 0f)
             {
-                OnDamaged();
+                OnDamaged(attackerController);
             }
             else
             {
@@ -24,7 +24,7 @@ namespace _TW_Framework
             }
         }
 
-        void OnDamaged();
+        void OnDamaged(BaseFormationController attackerController);
 
         void OnDead(DieType dieType, Vector3 thrownPower);
     }

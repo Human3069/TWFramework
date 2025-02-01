@@ -303,9 +303,14 @@ namespace _TW_Framework
             }
         }
 
-        void IDamageable.OnDamaged()
+        void IDamageable.OnDamaged(BaseFormationController attackerController)
         {
             // _animation.PlayQueued("OnDamaged");
+
+            if (Controller is EnemyFormationController)
+            {
+                Controller.OnAnyUnitTakenDamaged(attackerController);
+            }
         }
 
         public void PlayAnimation(string clipName)
@@ -368,8 +373,9 @@ namespace _TW_Framework
                       _unitHandler.IsValid == true)
                 {
                     _unitHandler.PlayAnimation("MeleeAttack");
+
                     IDamageable damageable = targetUnit;
-                    damageable.TakeDamage(meleeAttackDamage, DieType.Animated, Vector3.zero);
+                    damageable.TakeDamage(_unitHandler.Controller, meleeAttackDamage, DieType.Animated, Vector3.zero);
 
                     await UniTask.WaitForSeconds(UnityEngine.Random.Range(meleeAttackSpeed - 0.5f, meleeAttackSpeed + 0.5f));
                 }
@@ -503,7 +509,7 @@ namespace _TW_Framework
                     _PoolerType.EnablePool<BulletHandler>(BeforePool);
                     void BeforePool(BulletHandler bullet)
                     {
-                        bullet.Initialize(_unitHandler._TeamType, rangedAttackDamage);
+                        bullet.Initialize(_unitHandler.Controller, _unitHandler._TeamType, rangedAttackDamage);
 
                         Vector3 maxRandomed = new Vector3(UnityEngine.Random.Range(-5f, 5f), UnityEngine.Random.Range(-5f, 5f), 0f);
                         Vector3 accuracyApplied = Vector3.Lerp(maxRandomed, Vector3.zero, accuracy / 100f);
@@ -512,7 +518,7 @@ namespace _TW_Framework
                         float distance = (targetUnit.MiddlePos - _unitHandler.MiddlePos).magnitude;
 
                         PredictDataBundle predictBundle = PredictDataBundle.GetPredictData(_PoolerType);
-                        Vector3 predictPos = predictBundle.GetPredictedPosition(_unitHandler.muzzleFlash.transform.position, targetUnit);
+                        Vector3 predictPos = predictBundle.GetPredictedPosition(_unitHandler.muzzleFlash.transform.position, 0f, targetUnit);
                         Debug.DrawLine(_unitHandler.MiddlePos, predictPos, Color.blue, 0.1f);
                         Debug.DrawLine(predictPos, targetUnit.MiddlePos, Color.blue, 0.5f);
 

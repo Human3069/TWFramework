@@ -34,13 +34,16 @@ namespace _TW_Framework
 
         public Action<BulletHandler, RaycastHit> OnHitAction;
 
+        protected BaseFormationController _attackerController = null;
+
         protected virtual void Awake()
         {
             _rigidbody = this.GetComponent<Rigidbody>();
         }
 
-        public virtual void Initialize(TeamType type, float damage)
+        public virtual void Initialize(BaseFormationController attackerController, TeamType type, float damage)
         {
+            _attackerController = attackerController;
             _teamType = type;
             _damage = damage;
 
@@ -78,8 +81,8 @@ namespace _TW_Framework
                     {
                         if (this._teamType != hitHandler._TeamType && hitHandler.IsDead == false)
                         {
-                            IDamageable damageable = hitHandler as IDamageable;
-                            damageable.TakeDamage(_damage, DieType.Animated, Vector3.zero);
+                            IDamageable damageable = hitHandler;
+                            damageable.TakeDamage(_attackerController, _damage, DieType.Animated, Vector3.zero);
 
                             if (this.gameObject.activeSelf == true)
                             {

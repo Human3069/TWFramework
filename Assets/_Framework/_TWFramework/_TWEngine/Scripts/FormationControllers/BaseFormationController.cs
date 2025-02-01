@@ -21,7 +21,7 @@ namespace _TW_Framework
 
     public abstract class BaseFormationController : MonoBehaviour
     {
-        private const string _LOG_FORMAT = "<color=white><b>[BaseFormationController]</b></color> {0}";
+        private const string LOG_FORMAT = "<color=white><b>[BaseFormationController]</b></color> {0}";
 
         public const float MAX_FORMABLE_THRESHOLD = 0.8f;
         private const float _MAX_FORMABLE_ANGLE = 120;
@@ -47,7 +47,7 @@ namespace _TW_Framework
 
         [Header("=== FormationController ===")]
         [SerializeField]
-        protected AttackType _attackType;
+        protected AttackType _attackType = AttackType.Ranged;
         public AttackType AttackType
         {
             get
@@ -79,6 +79,14 @@ namespace _TW_Framework
             }
         }
 
+        public void OnAnyUnitTakenDamaged(BaseFormationController attackerController)
+        {
+            if (TargetController == null)
+            {
+                TargetController = attackerController;
+            }
+        }
+
         protected virtual async UniTask OnAssignedTargetController()
         {
             if (_attackType == AttackType.Melee)
@@ -99,7 +107,37 @@ namespace _TW_Framework
             }
             else if (_attackType == AttackType.Ranged)
             {
-                return;
+                while (TargetController != null && TargetController.UnitHandlerList.Count != 0)
+                {
+                    Vector3 thisPos = this.GetMiddlePos();
+                    Vector3 targetPos = TargetController.GetMiddlePos();
+                    float distanceToTarget = Vector3.Distance(thisPos, targetPos);
+                    float weaponRange = _UnitInfo._WeaponInfo.Range;
+
+                    if (distanceToTarget > weaponRange)
+                    {
+                        while (distanceToTarget > weaponRange)
+                        {
+                            if (TargetController == null)
+                            {
+                                return;
+                            }
+
+                            thisPos = this.GetMiddlePos();
+                            targetPos = TargetController.GetMiddlePos();
+                            distanceToTarget = Vector3.Distance(thisPos, targetPos);
+                            weaponRange = _UnitInfo._WeaponInfo.Range;
+
+                            ApplyMouseFormationing(targetPos, targetPos);
+                            await UniTask.WaitForSeconds(1f);
+                        }
+                    }
+                    else
+                    {
+                        ApplyCurrentUnitFormation();
+                        await UniTask.WaitForSeconds(1f);
+                    } 
+                }
             }
         }
 
@@ -338,7 +376,7 @@ namespace _TW_Framework
         [SerializeField]
         protected Vector3 lineEndPos;
 
-        [HideInInspector]
+        [ReadOnly]
         public float CurrentFacingAngle;
         [ReadOnly]
         public int SelectedIndex = -1;
@@ -362,8 +400,8 @@ namespace _TW_Framework
                 UnitHandlerList.Add(unit);
             }
 
-            lineStartPos = startPoint + (Vector3.left * unitDistance / 2f);
-            lineEndPos = startPoint + (Vector3.right * unitDistance / 2f);
+            lineStartPos = startPoint + (Vector3.right * unitDistance / 2f);
+            lineEndPos = startPoint + (Vector3.left * unitDistance / 2f);
 
             this._unitCount = _UnitInfo.UnitCount;
             this._unitSpacing = _UnitInfo.GetPairValue(FormationType.Rectangle).UnitSpacing;
@@ -384,6 +422,7 @@ namespace _TW_Framework
             }
 
             SelectedIndex = selectedIndex;
+            CurrentFacingAngle = facingAngle;
         }
 
         public void ResetSelectedIndex(int index)

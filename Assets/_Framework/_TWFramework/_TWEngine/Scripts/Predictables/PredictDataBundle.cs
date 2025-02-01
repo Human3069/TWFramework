@@ -1,7 +1,6 @@
 using _KMH_Framework;
 using _TW_Framework;
 using System.Collections.Generic;
-using Unity.VisualScripting;
 using UnityEngine;
 
 [CreateAssetMenu(fileName = "PredictDataBundle", menuName = "Scriptable Objects/PredictDataBundle")]
@@ -53,45 +52,47 @@ public class PredictDataBundle : ScriptableObject
         }
     }
 
-    private float GetPredictedGravityHeightAmount(float distance)
+    private float GetPredictedGravityHeightAmount(float firingAngleX, float distance)
     {
         (PredictableData lessData, PredictableData overData) = GetPredictableTwoPointDatas(distance);
 
         float distanceNormal = Mathf.InverseLerp(lessData.Distance, overData.Distance, distance);
         float heightAmount = Mathf.Lerp(lessData.AdditionalHeight, overData.AdditionalHeight, distanceNormal);
 
-        return heightAmount;
+        float hNormal = Vector3Ex.GetHorizontalNormal(firingAngleX);
+
+        return heightAmount * hNormal;
     }
 
     // Predicts velocity and gravity
-    public Vector3 GetPredictedPosition(Vector3 firePos, UnitHandler targetUnit)
+    public Vector3 GetPredictedPosition(Vector3 firePos, float firingAngleX, UnitHandler targetUnit)
     {
         float distance = (targetUnit.MiddlePos - firePos).magnitude;
         float lerpedSpeed = GetLinearProjectileSpeed(distance);
         Vector3 predictedVelocity = Vector3Ex.GetPredictPosition(firePos, targetUnit.MiddlePos, targetUnit.Velocity, lerpedSpeed);
-        Vector3 predictedGravity = new Vector3(0f, GetPredictedGravityHeightAmount(distance), 0f);
+        Vector3 predictedGravity = new Vector3(0f, GetPredictedGravityHeightAmount(firingAngleX, distance), 0f);
 
         Vector3 predictPos = predictedVelocity + predictedGravity;
         return predictPos;
     }
 
     // Predicts velocity and gravity
-    public Vector3 GetPredictedPosition(Vector3 firePos, Rigidbody targetRigidbody)
+    public Vector3 GetPredictedPosition(Vector3 firePos, float firingAngleX, Rigidbody targetRigidbody)
     {
         float distance = (targetRigidbody.centerOfMass - firePos).magnitude;
         float lerpedSpeed = GetLinearProjectileSpeed(distance);
         Vector3 predictedVelocity = Vector3Ex.GetPredictPosition(firePos, targetRigidbody.centerOfMass, targetRigidbody.linearVelocity, lerpedSpeed);
-        Vector3 predictedGravity = new Vector3(0f, GetPredictedGravityHeightAmount(distance), 0f);
+        Vector3 predictedGravity = new Vector3(0f, GetPredictedGravityHeightAmount(firingAngleX, distance), 0f);
 
         Vector3 predictPos = predictedVelocity + predictedGravity;
         return predictPos;
     }
 
     // Only Gravity Prediction
-    public Vector3 GetPredictedPosition(Vector3 firePos, Vector3 targetPos)
+    public Vector3 GetPredictedPosition(Vector3 firePos, float firingAngleX, Vector3 targetPos)
     {
         float distance = (targetPos - firePos).magnitude;
-        Vector3 predictedGravity = new Vector3(0f, GetPredictedGravityHeightAmount(distance), 0f);
+        Vector3 predictedGravity = new Vector3(0f, GetPredictedGravityHeightAmount(firingAngleX, distance), 0f);
 
         Vector3 predictPos = targetPos + predictedGravity;
         return predictPos;

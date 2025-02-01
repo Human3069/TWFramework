@@ -17,17 +17,12 @@ MonoBehaviour:
   - {fileID: 11400000, guid: 24f9e6d664e82ea40ac3a8aeb10c03d7, type: 2}
   - {fileID: 11400000, guid: 24f9e6d664e82ea40ac3a8aeb10c03d7, type: 2}
   - {fileID: 11400000, guid: 58bbc443e45d17e48b6a9147f68af800, type: 2}
-  - {fileID: 11400000, guid: 43566f0377c15484d8d6292b67636e6f, type: 2}
-  - {fileID: 11400000, guid: 43566f0377c15484d8d6292b67636e6f, type: 2}
-  - {fileID: 11400000, guid: 43566f0377c15484d8d6292b67636e6f, type: 2}
-  - {fileID: 11400000, guid: 43566f0377c15484d8d6292b67636e6f, type: 2}
-  - {fileID: 11400000, guid: 43566f0377c15484d8d6292b67636e6f, type: 2}
   - {fileID: 11400000, guid: b9dee11bd823ed747be470c0cb99f9be, type: 2}
   - {fileID: 11400000, guid: b9dee11bd823ed747be470c0cb99f9be, type: 2}
   playerUnitInfoPoint: {x: 0, y: 0, z: -150}
   playerFacingAngle: 0
   EnemyUnitInfos:
-  - {fileID: 11400000, guid: 43566f0377c15484d8d6292b67636e6f, type: 2}
+  - {fileID: 11400000, guid: 58bbc443e45d17e48b6a9147f68af800, type: 2}
   - {fileID: 11400000, guid: 96a274b0f54eee84d9c561dd4cdf1ae7, type: 2}
   - {fileID: 11400000, guid: 96a274b0f54eee84d9c561dd4cdf1ae7, type: 2}
   enemyUnitInfoPoint: {x: 0, y: 0, z: 150}

@@ -1,5 +1,4 @@
 using Cysharp.Threading.Tasks;
-using Unity.VisualScripting;
 using UnityEngine;
 
 namespace _TW_Framework
@@ -10,9 +9,9 @@ namespace _TW_Framework
 
         protected int contactCount = 0;
 
-        public override void Initialize(TeamType type, float damage)
+        public override void Initialize(BaseFormationController attackerController, TeamType type, float damage)
         {
-            base.Initialize(type, damage);
+            base.Initialize(attackerController, type, damage);
 
             contactCount = 0;
         }
@@ -37,8 +36,8 @@ namespace _TW_Framework
                             float currentPower = _rigidbody.linearVelocity.magnitude / 10f;
                             currentPower = Mathf.Lerp(0f, currentPower, Random.Range(0.25f, 1f));
 
-                            IDamageable damageable = hitHandler as IDamageable;
-                            damageable.TakeDamage(_damage, DieType.Physical, this.transform.forward * currentPower);
+                            IDamageable damageable = hitHandler;
+                            damageable.TakeDamage(_attackerController, _damage, DieType.Physical, this.transform.forward * currentPower);
                         }
                     }
                     else

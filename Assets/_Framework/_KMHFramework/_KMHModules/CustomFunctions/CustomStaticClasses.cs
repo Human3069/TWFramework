@@ -68,6 +68,31 @@ namespace _KMH_Framework
 
             return targetPredict;
         }
+
+        // horizontal => 1, vertical => 0, 45 degree => 0.5
+        public static float GetHorizontalNormal(float eulerAngleX)
+        {
+            float angleX = eulerAngleX;
+            angleX = angleX % 360f;
+
+            if (angleX < 0f)
+            {
+                angleX += 360f;
+            }
+
+            if (angleX <= 90f)
+            {
+                return 1f - (angleX / 90f);
+            }
+            else if (angleX <= 270f)
+            {
+                return 1f - (angleX - 90f) / 180f;
+            }
+            else
+            {
+                return (angleX - 270f) / 90f;
+            }
+        }
         #endregion
 
         #region Get Two Points...
